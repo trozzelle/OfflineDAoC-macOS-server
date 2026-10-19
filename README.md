@@ -1,14 +1,25 @@
-# DAoC Server
+# OfflineDAoC-macOS server
 
-A Linux-first, server-only DAoC server with autonomous and companion bots, based on a pinned
-OpenDAoC fork from Offline DAoC (synced to 0.36). It builds into one portable folder that needs no .NET
-install. The game client is not included; players install it separately. I recommend the opendaoc client which can be found in OpenDAOC's documenation:
-https://www.opendaoc.com/ 
+The DAoC server that [OfflineDAoC-macOS](https://github.com/trozzelle/OfflineDAoC-macOS) builds
+and runs on macOS: [Offline DAoC](https://github.com/shadowofze/OfflineDAoC)'s OpenDAoC server
+with its autonomous and companion bots (synced to 0.37), plus an admin host and TUI, a world
+builder, and the Offline DAoC world data and navmeshes. `daoc server install` builds it into one
+folder; the macOS build pipeline lives in OfflineDAoC-macOS (`server/tools/build-release.sh`).
 
-This is based off of Shadowofze's work at: https://github.com/shadowofze/OfflineDAoC
+## Where it comes from
 
-This project is meant to provide a fast and simple portable server on Linux instead of Windows. Tested on steam deck
-but should work on any modern distro.
+- Forked on 2026-10-18 from catastrophic-impact's
+  [daoc-offline-linux-server-bots](https://github.com/catastrophic-impact/daoc-offline-linux-server-bots)
+  (main at `18498ae`, Offline DAoC 0.36), a Linux-first portable build of the same server. Its
+  history and branches are kept here; `upstream-0.35` holds the 0.35 line.
+- Offline DAoC is tracked directly: `tools/upstream/sync.sh offlinedaoc …` pulls each release's
+  server code ([docs/UPSTREAM-SYNC.md](docs/UPSTREAM-SYNC.md), [UPSTREAM.md](UPSTREAM.md)).
+- Our own changes are commits on top: macOS fixes and, from here on, our features and macOS
+  performance work. `main` follows the newest Offline DAoC version; `macos-<version>` branches keep
+  each older version's tree with its macOS fixes (`macos-0.35`, `macos-0.36`).
+
+The Linux build instructions below are inherited from the Linux repo and are not tested here (a
+server-only folder; the game client is not included).
 
 ## Quick start
 
@@ -30,8 +41,8 @@ compressed file per mesh, about 360 MB in all).
 ### 1. Get the source
 
 ```bash
-git clone https://github.com/catastrophic-impact/daoc-offline-linux-server-bots.git
-cd daoc-offline-linux-server-bots
+git clone https://github.com/trozzelle/OfflineDAoC-macOS-server.git
+cd OfflineDAoC-macOS-server
 ```
 
 Or download it as a ZIP from GitHub (**Code → Download ZIP**) and unpack it.
@@ -61,7 +72,7 @@ Install the **.NET 10 SDK**, **cmake**, **g++** and **curl** with your package m
 ```
 dist/daoc-server/                              <- the server, ready to start (world and navmeshes installed)
 dist/daoc-server-<version>-linux-x64.tar.gz    <- the server without navmeshes, as one file
-dist/daoc-navmeshes-classic-si-3.tar.xz        <- the navmeshes, as one file
+dist/daoc-navmeshes-classic-si-4.tar.xz        <- the navmeshes, as one file
 ```
 
 To run it on another Linux machine, copy `dist/daoc-server` (or the two archives, then run
@@ -113,7 +124,7 @@ Accounts are created on first login. To make yours an admin, go to the **Account
 
 ## What's in the game
 
-- **World:** Classic + Shrouded Isles (the Offline DAoC 0.36 world), with Darkness Falls, the
+- **World:** Classic + Shrouded Isles (the Offline DAoC 0.37 world), with Darkness Falls, the
   Realm Exchange and stablemaster routes.
 - **Autonomous bots:** persistent characters that level, hunt, travel, group, raid and fight in
   RvR on their own. Manage them in the admin screen's Bots and Population tabs.

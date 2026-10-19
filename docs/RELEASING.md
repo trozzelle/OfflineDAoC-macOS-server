@@ -7,15 +7,15 @@
    version comes from `git describe`.
 3. Create a GitHub release and attach:
    - `dist/daoc-server-<version>-linux-x64.tar.gz` (server and world, ~85 MB);
-   - `dist/daoc-navmeshes-classic-si-3.tar.xz` and its `.sha256` (~360 MB; make it with
+   - `dist/daoc-navmeshes-classic-si-4.tar.xz` and its `.sha256` (~360 MB; make it with
      `tools/package-navmeshes.sh`), for people who use the
      release instead of building from source. Upload it once per navmesh set: attach it to every
-     release, or keep a dedicated `navmeshes-classic-si-3` release and link to it.
+     release, or keep a dedicated `navmeshes-classic-si-4` release and link to it.
 
    People building from source don't need this; the navmeshes are in the source
    (`world/navmesh/`).
 4. Put the navmesh download URL in `deploy/release.conf`
-   (`NAVMESH_URL=https://github.com/catastrophic-impact/daoc-offline-linux-server-bots/releases/download/<tag>/daoc-navmeshes-classic-si-3.tar.xz`),
+   (`NAVMESH_URL=https://github.com/trozzelle/OfflineDAoC-macOS-server/releases/download/<tag>/daoc-navmeshes-classic-si-4.tar.xz`),
    commit, and rebuild. `./navmesh-install.sh` with no arguments then downloads it automatically
    when the archive isn't next to the folder.
 
@@ -28,7 +28,7 @@ The repo carries one compressed file per mesh: `world/navmesh/zone042.nav.xz` an
 `seams.json.xz`, `pockets.json.xz` and `roads.json.xz`, listed with their SHA-256 in
 `world/navmesh-manifest.sha256`. Git stores identical files once, so an Offline DAoC release that
 changes 3 meshes adds about 20 MB to the repo, not a whole new archive. The current set is the 103
-meshes plus the three bot data files (zone borders, walled pockets, roads) from Offline DAoC 0.36
+meshes plus the three bot data files (zone borders, walled pockets, roads) from Offline DAoC 0.37
 (see `UPSTREAM.md`).
 
 ```bash
@@ -48,7 +48,7 @@ its name in the manifest header and in `deploy/navmesh-install.sh` (`SET=`) and 
 - `tools/fetch-upstream-db.sh` pins OpenDAoC-Database (`DB_COMMIT`) and a content hash over its
   `.sql` files (`DB_CONTENT_SHA256`, independent of GitHub's archive compression).
 - `world/patches/200-*.sql` are **generated**. Don't edit them by hand. They turn that upstream
-  dump into the pristine world of the Offline DAoC release we track (0.36, plain edition).
+  dump into the pristine world of the Offline DAoC release we track (0.37, plain edition).
 - `world/patches/300-*.sql` are **hand-written** changes on top (for example
   `300-bot-login-speed.sql`). Add new world changes here, with a comment explaining why.
 
@@ -66,6 +66,11 @@ a new release, skip step 1):
    (for 0.36: SHA-256 `4fdb7ca4…`, also listed in the plain release's `download-manifest.json`).
    The zip is split in parts, so read the one file with HTTP range requests rather than downloading
    it all (see `tools/world/rangezip.py`).
+   From 0.37 a release is an update to the 0.36 base (`"Mode": "patch"` in its
+   `download-manifest.json`) and ships no database: take the 0.36 plain DB above and apply the game
+   patch's (`OfflineDAoC-v<x>-game-patch.zip` on the v<x>b release) `db-<x>.json` to it with
+   `python3 tools/world/apply-release-update.py <db> db-<x>.json`. Its counts must match the JSON's
+   `Summary`, with no rows "left as the game had them".
    Set `WORLD` at the top of the script to the release, then
    `python3 tools/world/derive-world-delta.py <pristine db> /tmp/upstream.sqlite world/patches`
    (it removes nothing itself: delete the old `200-*` files first). Check the script's `EXCLUDED`

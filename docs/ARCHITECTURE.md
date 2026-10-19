@@ -85,7 +85,8 @@ project, not routine. See [UPSTREAM.md](../UPSTREAM.md).
 | Server settings | `ServerProperty` table | In game: `/serverproperty`. Bot settings are in category `autonomous_population`. |
 | Config | `config/serverconfig.xml`, `logconfig.xml`, `invalidnames.txt`, `admins.json` | Created from `defaults/`; never overwritten by upgrades. |
 | Bot tuning | `bin/bot-goals.json` (optional; defaults built in) | Goal mix per level band; read at startup. |
-| Navmeshes | `navmesh/zone*.nav` (103 files, about 2 GB) plus `seams.json`, `pockets.json` and `roads.json` | Set `classic-si-3`; manifest `world/navmesh-manifest.sha256`. |
+| Navmeshes | `navmesh/zone*.nav` (103 files, about 2 GB) plus `seams.json`, `pockets.json` and `roads.json` | Set `classic-si-4`; manifest `world/navmesh-manifest.sha256`. |
+| Classic quests | `bin/classic-quests.json` (from `world/classic-quests.json`) | Quest step markers, event spawns, quest monsters; read by `ClassicQuests`. Without it those are off. |
 
 **World pipeline** (`tools/build-release.sh`):
 1. `fetch-upstream-db.sh` downloads OpenDAoC-Database at the pinned commit and verifies a content
@@ -93,7 +94,7 @@ project, not routine. See [UPSTREAM.md](../UPSTREAM.md).
 2. `WorldBuilder` creates every table from the server's own DataObjects and loads the dump's
    rows.
 3. `world/patches/*.sql` run in name order:
-   - `200-*` is the generated Offline DAoC delta, which reproduces 0.35's pristine world exactly;
+   - `200-*` is the generated Offline DAoC delta, which reproduces 0.37's pristine world exactly;
    - `300-*` are hand-written changes (for example, faster bot logins).
 
 ## 6. Bots (summary)

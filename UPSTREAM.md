@@ -21,26 +21,50 @@ Policy: **static snapshot, manual pulls.** See docs/ARCHITECTURE.md §9.
   autonomous bot logic (`bots/autonomous/AutonomousArmyPush`, `ZoneRoads`, ...). Not imported: client, launcher, release
   scripts and `tools/`. Sluaghbinder additions (`CripplingPlague`) came along because they are woven into shared enums;
   they stay off via `classes / enable_sluaghbinder = False`.
-- Next pull: `tools/upstream/sync.sh offlinedaoc report|check|apply <tag>` (docs/UPSTREAM-SYNC.md). Our own changes on top are small: `Admin.Host/`,
-  `DaocAdmin/`, `Admin.Protocol/`, `WorldBuilder/`, population settings, login handler, console
-  host, the csproj files and `Pathing/Detour/CMakeLists.txt`.
+- **Synced to v0.37 (`ab4df02`, 2026-10-18).** v0.37, v0.37b and v0.37c are the same commit. Applied `d88b7b2..ab4df02`
+  with `tools/upstream/sync.sh offlinedaoc apply v0.37` (its first real `apply`): every folder clean except one hunk in
+  `src/Bots/autonomous/AutonomousPopulationController.cs` (the orphan-repair cache field, next to our population
+  settings), applied by hand. Brings guild bots (`Bots/autonomous/AutonomousBotGuilds`, table `offline_world_bot_guild`),
+  siege and raid fixes, bot travel and less route-search churn. After the sync, every mapped file is identical to
+  upstream's except the ones listed below.
+- Our own changes on top of upstream's files: `CoreServer/Actions/ConsoleStart.cs` (console host and
+  `AdminHost.Register()`), `GameServer/packets/Client/168/LoginRequestHandler.cs` (the admin role hook and its lazy
+  logger), `Bots/autonomous/AutonomousPopulationController.cs`, `AutonomousPopulationProperties.cs` and
+  `AutonomousBotGoalPolicy.cs` (population settings and bot goals from the admin host), the `GameServer`, `CoreServer`
+  and `Tests` csproj files, and `Pathing/Detour/CMakeLists.txt`. Our own folders: `Admin.Host/`, `DaocAdmin/`,
+  `Admin.Protocol/`, `WorldBuilder/`.
+- Next pull: `tools/upstream/sync.sh offlinedaoc report|check|apply <tag>` (docs/UPSTREAM-SYNC.md).
 - The Sluaghbinder ("b" edition) code stays in, switched off by `classes / enable_sluaghbinder = False`,
   as upstream does for its plain edition.
 
+## catastrophic-impact/daoc-offline-linux-server-bots (where this repo was forked from)
+
+- Forked on 2026-10-18 at its `main` `18498ae` (Offline DAoC 0.36); `upstream-0.35` (`12a0846`) came along. Not
+  synced since: take its changes, if any, as a merge or cherry-picks and note them here.
+
 ## World data and navmeshes
 
-- Upstream ships its world DB and navmeshes only inside the release zip, never in git.
-- **World: v0.36 (plain edition).** The plain DB is `OfflineDAoC-v0.36b/editions/0.36-no-custom-class/runtime/data/opendaoc.sqlite3.db`
-  inside `OfflineDAoC-v0.36b.zip.001-.003` (SHA-256 `4fdb7ca4…`, matching the v0.36 `download-manifest.json`). It was
-  read straight out of the split zip with HTTP range requests (about 30 MB transferred of 4.8 GB).
+- Upstream ships its world DB and navmeshes only in its releases, never in git.
+- **From 0.37 a release is an update to the 0.36 base** (`download-manifest.json` `"Mode": "patch"`): the full 0.36
+  games stay on their release pages, and the v0.37b release carries `OfflineDAoC-v0.37-game-patch.zip` (38 MB) with
+  the changed files and `db-0.37.json` / `db-0.37b.json` (identical in 0.37), which upstream's patcher
+  (`source/tools/OfflineDaoc.Patcher`) applies to the player's database. No full 0.37 database exists, so
+  `tools/world/apply-release-update.py` (a port of that patcher's `WorldUpdate`) makes the pristine one from 0.36's.
+- **World: v0.37 (plain edition)** = the 0.36 plain DB (`OfflineDAoC-v0.36b/editions/0.36-no-custom-class/runtime/data/opendaoc.sqlite3.db`
+  inside `OfflineDAoC-v0.36b.zip.001-.003`, SHA-256 `4fdb7ca4…`, read with `tools/world/rangezip.py`) plus
+  `db-0.37.json`: 16 rows added, 263 changed, every changed row still as released (Mob, ItemTemplate, DataQuest,
+  Path, PathPoints). The new `offline_world_bot_guild` table is player progress (the server creates it).
 - `world/patches/200-*.sql` turn the OpenDAoC-Database dump (below) into that DB's world. They were regenerated with
-  `tools/world/derive-world-delta.py` and verified to reproduce it exactly (0 differing tables).
-  Compared with the 0.35 patches: 557 missing quest reward items are fixed, startup errors fell from 1,157 to 390.
-  The 390 left are in upstream's own 0.36 DB (for example 7 missing poison/potion spells, 42 missing NPC templates).
-- **Navmeshes: set `classic-si-3`, from the v0.36b zip** (`runtime/server/navmesh/`, 106 files, read with the same range
-  requests). The 103 `zone*.nav` files and `seams.json` are byte-identical to the 0.35 set (`classic-si-2`); `pockets.json`
-  changed and `roads.json` is new (read by `Bots/autonomous/AutonomousZoneRoads`; without it long bot walks use Detour only).
-  Stored as one `.xz` per mesh in `world/navmesh/` so unchanged meshes cost nothing in later updates.
+  `tools/world/derive-world-delta.py` and verified to reproduce it exactly (0 differing tables). 0.37 adds
+  `200-path.sql` and `200-pathpoints.sql`.
+- `world/classic-quests.json` (new here in 0.37, from the game patch's `runtime/server/`): the classic quests' step
+  markers, event spawns, quest monsters and fellows, which `GameServer/quests/QuestsMgr/ClassicQuests` reads next to
+  the program. Earlier builds of this server ran without it, so those quests had no markers or event spawns.
+- **Navmeshes: set `classic-si-4`** = `classic-si-3` (the v0.36b zip's `runtime/server/navmesh/`) with the 0.37 game
+  patch's `pockets.json`, the only navmesh file 0.37 changes. Stored as one `.xz` per mesh in `world/navmesh/` so
+  unchanged meshes cost nothing in later updates.
+  - `classic-si-3` (0.36): the 103 `zone*.nav` files and `seams.json` are byte-identical to the 0.35 set
+    (`classic-si-2`); `pockets.json` changed and `roads.json` is new (read by `Bots/autonomous/AutonomousZoneRoads`).
   - 0.35 reference: `OfflineDAoC-v0.35b.zip`, SHA-256 `5a1d77df…`, DB SHA-256 `feb4a511…`.
 
 ## OpenDAoC
