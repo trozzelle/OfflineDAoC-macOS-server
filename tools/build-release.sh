@@ -67,6 +67,8 @@ ln -s ../logs "$OUT/bin/logs"
 
 cp "$REPO/deploy/serverconfig.template.xml" "$OUT/defaults/serverconfig.xml"
 cp "$REPO/src/GameServer/config/logconfig.xml" "$REPO/src/GameServer/config/invalidnames.txt" "$OUT/defaults/"
+# The classic quests' markers, event spawns and quest monsters (ClassicQuests reads it next to the program).
+cp "$REPO/world/classic-quests.json" "$OUT/bin/"
 cp "$REPO/deploy/daoc-server.sh" "$REPO/deploy/daoc-admin" "$REPO/deploy/navmesh-install.sh" "$REPO/deploy/release.conf" "$OUT/"
 cp "$REPO/deploy/README-release.md" "$OUT/README.md"
 echo "$VERSION" > "$OUT/VERSION"
