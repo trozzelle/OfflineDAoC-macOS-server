@@ -53,10 +53,12 @@ Policy: **static snapshot, manual pulls.** See docs/ARCHITECTURE.md §9.
 - **World: v0.37 (plain edition)** = the 0.36 plain DB (`OfflineDAoC-v0.36b/editions/0.36-no-custom-class/runtime/data/opendaoc.sqlite3.db`
   inside `OfflineDAoC-v0.36b.zip.001-.003`, SHA-256 `4fdb7ca4…`, read with `tools/world/rangezip.py`) plus
   `db-0.37.json`: 16 rows added, 263 changed, every changed row still as released (Mob, ItemTemplate, DataQuest,
-  Path, PathPoints). The new `offline_world_bot_guild` table is player progress (the server creates it).
+  Path, PathPoints). The new `offline_world_bot_guild` table is player progress: the WorldBuilder creates it, empty,
+  from the server's DataObjects, as for every table.
 - `world/patches/200-*.sql` turn the OpenDAoC-Database dump (below) into that DB's world. They were regenerated with
   `tools/world/derive-world-delta.py` and verified to reproduce it exactly (0 differing tables). 0.37 adds
-  `200-path.sql` and `200-pathpoints.sql`.
+  `200-path.sql` and `200-pathpoints.sql`. A macOS build logs 394 `ERR` lines at startup, of the same kinds as the
+  0.36 baseline of about 390 (241 `SkillBase` for missing spells, 42 NPC templates, 42 loot templates, 35 doors).
 - `world/classic-quests.json` (0.37, from the game patch's `runtime/server/`) and `world/classic-quest-guides.json`
   (unchanged since 0.36, from the v0.36b zip's `runtime/server/`): the classic quests' step markers, event spawns,
   quest monsters and fellows (`GameServer/quests/QuestsMgr/ClassicQuests`) and the Quest Guide's pages (`QuestGuide`),
