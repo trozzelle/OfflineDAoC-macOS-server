@@ -14,6 +14,10 @@ released rows added (INSERT OR IGNORE), changed and removed, where a change or r
 matches a row that still has its released values (IgnoreColumns and the table's IgnoreCompare
 are left out of the match). The version is recorded in offline_patch_log, and an update already
 recorded there is skipped, as upstream does. The database is changed in place, in one transaction.
+
+Meant for a pristine world: every table's added/changed/removed must equal the JSON's Summary,
+with no row "left as the game had them" (where upstream's patcher keeps a player's changed row,
+here it means the base was not the release's). Anything else rolls back and exits 1.
 """
 import base64
 import json
@@ -47,11 +51,12 @@ def apply(database, update_file):
     version = root["Version"]
     con = sqlite3.connect(database, isolation_level=None)
     try:
+        con.execute("BEGIN")
         con.execute("CREATE TABLE IF NOT EXISTS offline_patch_log (Version TEXT PRIMARY KEY, AppliedUtc TEXT, Notes TEXT)")
         if con.execute("SELECT count(*) FROM offline_patch_log WHERE Version=?", (version,)).fetchone()[0]:
+            con.execute("ROLLBACK")
             print(f"World data: already updated to {version}.")
             return
-        con.execute("BEGIN")
         for t in root["NewTables"]:
             con.execute(_if_not_exists(t["Create"]))
         for col in root["NewColumns"]:
@@ -60,34 +65,46 @@ def apply(database, update_file):
         ignored = {c.lower() for c in root["IgnoreColumns"]}
         added = changed = removed = kept = 0
         notes = []
+        counts = {}
         for t in root["Tables"]:
             table, cols = t["Table"], t["Columns"]
             table_ignore = {c.lower() for c in t.get("IgnoreCompare", [])}
             cmp = [i for i, c in enumerate(cols) if c.lower() not in ignored and c.lower() not in table_ignore]
             where = " AND ".join(f"{q(cols[i])} IS ?" for i in cmp)
-            table_kept = 0
+            table_kept = table_added = table_changed = table_removed = 0
             insert = f"INSERT OR IGNORE INTO {q(table)} ({','.join(map(q, cols))}) VALUES ({','.join('?' * len(cols))})"
             for row in t["Insert"]:
                 if con.execute(insert, [value(v) for v in row]).rowcount == 1:
-                    added += 1
+                    table_added += 1
                 else:
                     table_kept += 1
             update = f"UPDATE {q(table)} SET {','.join(q(c) + '=?' for c in cols)} WHERE {where}"
             for row in t["Update"]:
                 params = [value(v) for v in row["New"]] + [value(row["Old"][i]) for i in cmp]
                 if con.execute(update, params).rowcount > 0:
-                    changed += 1
+                    table_changed += 1
                 else:
                     table_kept += 1
             delete = f"DELETE FROM {q(table)} WHERE {where}"
             for row in t["Delete"]:
                 if con.execute(delete, [value(row[i]) for i in cmp]).rowcount > 0:
-                    removed += 1
+                    table_removed += 1
                 else:
                     table_kept += 1
             if table_kept:
                 notes.append(f"{table}: {table_kept} row(s) left as the game had them")
+            counts[table] = {"added": table_added, "changed": table_changed, "removed": table_removed}
+            added, changed, removed = added + table_added, changed + table_changed, removed + table_removed
             kept += table_kept
+        expected = {t: {k: s.get(k, 0) for k in ("added", "changed", "removed")}
+                    for t, s in root.get("Summary", {}).items()}
+        if kept or counts != expected:
+            for table in sorted(set(counts) | set(expected)):
+                if counts.get(table) != expected.get(table):
+                    print(f"  {table}: applied {counts.get(table)}, Summary {expected.get(table)}", file=sys.stderr)
+            for note in notes:
+                print("  " + note, file=sys.stderr)
+            raise SystemExit(f"{database} is not the world {update_file} was made from; nothing was changed")
         con.execute("INSERT INTO offline_patch_log (Version, AppliedUtc, Notes) VALUES (?, strftime('%Y-%m-%dT%H:%M:%fZ','now'), ?)",
                     (version, "; ".join(notes)))
         con.execute("COMMIT")

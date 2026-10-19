@@ -86,7 +86,7 @@ project, not routine. See [UPSTREAM.md](../UPSTREAM.md).
 | Config | `config/serverconfig.xml`, `logconfig.xml`, `invalidnames.txt`, `admins.json` | Created from `defaults/`; never overwritten by upgrades. |
 | Bot tuning | `bin/bot-goals.json` (optional; defaults built in) | Goal mix per level band; read at startup. |
 | Navmeshes | `navmesh/zone*.nav` (103 files, about 2 GB) plus `seams.json`, `pockets.json` and `roads.json` | Set `classic-si-4`; manifest `world/navmesh-manifest.sha256`. |
-| Classic quests | `bin/classic-quests.json` (from `world/classic-quests.json`) | Quest step markers, event spawns, quest monsters; read by `ClassicQuests`. Without it those are off. |
+| Classic quests | `bin/classic-quests.json`, `bin/classic-quest-guides.json` (from `world/`) | Quest step markers, event spawns, quest monsters (`ClassicQuests`); Quest Guide pages (`QuestGuide`). Without them those are off. |
 
 **World pipeline** (`tools/build-release.sh`):
 1. `fetch-upstream-db.sh` downloads OpenDAoC-Database at the pinned commit and verifies a content

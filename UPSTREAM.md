@@ -57,9 +57,12 @@ Policy: **static snapshot, manual pulls.** See docs/ARCHITECTURE.md §9.
 - `world/patches/200-*.sql` turn the OpenDAoC-Database dump (below) into that DB's world. They were regenerated with
   `tools/world/derive-world-delta.py` and verified to reproduce it exactly (0 differing tables). 0.37 adds
   `200-path.sql` and `200-pathpoints.sql`.
-- `world/classic-quests.json` (new here in 0.37, from the game patch's `runtime/server/`): the classic quests' step
-  markers, event spawns, quest monsters and fellows, which `GameServer/quests/QuestsMgr/ClassicQuests` reads next to
-  the program. Earlier builds of this server ran without it, so those quests had no markers or event spawns.
+- `world/classic-quests.json` (0.37, from the game patch's `runtime/server/`) and `world/classic-quest-guides.json`
+  (unchanged since 0.36, from the v0.36b zip's `runtime/server/`): the classic quests' step markers, event spawns,
+  quest monsters and fellows (`GameServer/quests/QuestsMgr/ClassicQuests`) and the Quest Guide's pages (`QuestGuide`),
+  both read next to the program. Earlier builds of this server ran without them: those quests had no markers or event
+  spawns and the Quest Guide showed journal text only. The rest of the release's `runtime/server/` is binaries,
+  configs this repo has its own of, translations (from `src/`), and `classic-otd.json`, which no server code reads.
 - **Navmeshes: set `classic-si-4`** = `classic-si-3` (the v0.36b zip's `runtime/server/navmesh/`) with the 0.37 game
   patch's `pockets.json`, the only navmesh file 0.37 changes. Stored as one `.xz` per mesh in `world/navmesh/` so
   unchanged meshes cost nothing in later updates.
