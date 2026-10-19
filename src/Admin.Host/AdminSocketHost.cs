@@ -74,6 +74,19 @@ namespace DOL.GS.Admin
             if (!_running)
                 return;
             _running = false;
+            // macOS: a pending AcceptAsync on a Unix-domain socket is not interrupted by
+            // Close(); the accept would block this spin-wait forever. Wake it with a dummy
+            // connection so the queued accept completes before the listener is disposed.
+            try
+            {
+                using var waker = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+                waker.Connect(new UnixDomainSocketEndPoint(_path));
+            }
+            catch
+            {
+                // The listener may already be gone (crash, double stop); the close below is
+                // then safe on its own.
+            }
             _listener?.Close();
             try { File.Delete(_path); } catch (IOException) { }
         }
