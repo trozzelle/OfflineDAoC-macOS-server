@@ -24,6 +24,10 @@ No client code, launcher or release tooling from upstream is imported. Ever.
 
 ## Pulling from Offline DAoC
 
+Before a sync moves `main` to a new version, check that the version `main` holds has its own
+`macos-<version>` branch (OfflineDAoC-macOS pins and updates follow it). The branches are protected:
+never force-push or delete them, since shipped pins name their commits.
+
 ```bash
 tools/upstream/sync.sh offlinedaoc report v0.37     # files that changed, with our paths
 tools/upstream/sync.sh offlinedaoc check  v0.37     # do the patches apply cleanly?

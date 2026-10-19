@@ -15,8 +15,10 @@ folder; the macOS build pipeline lives in OfflineDAoC-macOS (`server/tools/build
 - Offline DAoC is tracked directly: `tools/upstream/sync.sh offlinedaoc …` pulls each release's
   server code ([docs/UPSTREAM-SYNC.md](docs/UPSTREAM-SYNC.md), [UPSTREAM.md](UPSTREAM.md)).
 - Our own changes are commits on top: macOS fixes and, from here on, our features and macOS
-  performance work. `main` follows the newest Offline DAoC version; `macos-<version>` branches keep
-  each older version's tree with its macOS fixes (`macos-0.35`, `macos-0.36`).
+  performance work. Each game version OfflineDAoC-macOS ships has a `macos-<version>` branch
+  (`macos-0.35`, `macos-0.36`, `macos-0.37`), which that version's pin and `daoc server update`
+  follow. `main` is where the next Offline DAoC sync lands; its version's branch is cut from it
+  when OfflineDAoC-macOS ships that version. Fixes for a shipped version go on its branch.
 
 The Linux build instructions below are inherited from the Linux repo and are not tested here (a
 server-only folder; the game client is not included).
