@@ -19,6 +19,9 @@ namespace DOL.GS.Admin
     public static class AdminService
     {
         private static readonly Logger Log = LoggerManager.Create(MethodBase.GetCurrentMethod().DeclaringType);
+        /// <summary>The Offline DAoC release this branch's server code and world track (OfflineDAoC-macOS's
+        /// `daoc server update` reads it to tell which game version a commit belongs to).</summary>
+        public const string OfflineDaocVersion = "0.35";
         /// <summary>
         /// Raised by "server stop". The console host subscribes and runs its normal save-and-exit
         /// path (the same as typing exit or sending SIGTERM).
