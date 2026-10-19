@@ -14,9 +14,9 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEST="${DAOC_HOME:-$HERE}/navmesh"
-SET="classic-si-3"
+SET="classic-si-4"
 ARCHIVE_NAME="daoc-navmeshes-$SET.tar.xz"
-# Set when the project is published, or override: NAVMESH_URL=https://.../daoc-navmeshes-classic-si-3.tar.xz
+# Set when the project is published, or override: NAVMESH_URL=https://.../daoc-navmeshes-classic-si-4.tar.xz
 work=""
 NAVMESH_URL="${NAVMESH_URL:-$(sed -n 's/^NAVMESH_URL=//p' "$HERE/release.conf" 2>/dev/null)}"
 die() { echo "navmesh-install: $*" >&2; exit 1; }
