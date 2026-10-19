@@ -50,7 +50,10 @@ namespace DOL.GS.PacketHandler.Client.v168
 	[PacketHandlerAttribute(PacketHandlerType.TCP, eClientPackets.LoginRequest, "Handles the login.", eClientStatus.None)]
 	public class LoginRequestHandler : PacketHandler
 	{
-		private static readonly Logger Log = LoggerManager.Create(MethodBase.GetCurrentMethod().DeclaringType);
+		// Created on first use: the admin host touches this class before logging is initialised, and a
+		// logger created then stays a NullLogger, which drops every login line from server.log.
+		private static Logger _log;
+		private static Logger Log => _log ??= LoggerManager.Create(typeof(LoginRequestHandler));
 
 		private static DateTime _lastAccountCreateTime;
 
