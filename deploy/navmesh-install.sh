@@ -3,59 +3,45 @@
 # pockets.json and roads.json zone data) into this server folder's navmesh/.
 # NPCs and bots need them to path around obstacles; without them they walk in straight lines.
 #
-#   ./navmesh-install.sh                         default: the navmesh archive from this project's release
-#                                                (daoc-navmeshes-*.tar.xz next to this folder, or downloaded)
-#   ./navmesh-install.sh --from-archive <file>   a downloaded daoc-navmeshes-*.tar.xz
+#   ./navmesh-install.sh --from-xz <folder>      the source's world/navmesh: one <file>.xz per mesh,
+#                                                checked against ../navmesh-manifest.sha256 beside it
 #   ./navmesh-install.sh --from-dir <folder>     zone*.nav files from another OpenDAoC-based server
-#   ./navmesh-install.sh --build-from-client <DAoC client folder>   generate them yourself (slow; see README)
+#   ./navmesh-install.sh --build-from-client <DAoC client folder>   NOT available on macOS (see README)
 #
-# The archive and --from-dir are checked against MANIFEST.sha256 (the shipped navmesh set).
+# `daoc server install` runs --from-xz with the navmeshes of the pinned source.
+# macOS port of the Linux repo's tools/navmesh-unpack.sh and deploy/navmesh-install.sh: shasum -a 256
+# instead of sha256sum, sysctl instead of nproc; --build-from-client stays unavailable (the
+# generator needs Windows/Wine).
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEST="${DAOC_HOME:-$HERE}/navmesh"
-SET="classic-si-4"
-ARCHIVE_NAME="daoc-navmeshes-$SET.tar.xz"
-# Set when the project is published, or override: NAVMESH_URL=https://.../daoc-navmeshes-classic-si-4.tar.xz
+DATA_FILES=(seams.json pockets.json roads.json)
 work=""
-NAVMESH_URL="${NAVMESH_URL:-$(sed -n 's/^NAVMESH_URL=//p' "$HERE/release.conf" 2>/dev/null)}"
 die() { echo "navmesh-install: $*" >&2; exit 1; }
 
-install_archive() {
-  local archive=$1
-  [[ -f $archive ]] || die "no such file: $archive"
-  if [[ -f $archive.sha256 ]]; then
-    [[ $(sha256sum "$archive" | cut -d' ' -f1) == "$(<"$archive.sha256")" ]] || die "$archive is damaged (checksum mismatch)"
-  fi
+install_xz() {
+  local src=$1 manifest
+  [[ -d $src ]] || die "no such folder: $src"
+  manifest="$(cd "$src/.." && pwd)/navmesh-manifest.sha256"
+  [[ -f $manifest ]] || die "no navmesh-manifest.sha256 beside $src"
+  compgen -G "$src/*.xz" >/dev/null || die "no *.xz navmeshes in $src"
   work=$(mktemp -d "${DEST%/}.install.XXXXXX")
   trap 'rm -rf "${work:-}"' EXIT
-  echo "Unpacking $(basename "$archive") ..."
-  tar -xJf "$archive" -C "$work"
-  [[ -f $work/navmesh/MANIFEST.sha256 ]] || die "$archive is not a navmesh archive"
-  (cd "$work/navmesh" && grep -v '^#' MANIFEST.sha256 | sha256sum --check --quiet) || die "navmeshes failed verification"
+  echo "Unpacking $(grep -vc '^#' "$manifest") navmesh files ..."
+  grep -v '^#' "$manifest" | awk '{print $2}' |
+    xargs -P "$(sysctl -n hw.ncpu)" -I{} sh -c 'xz -dc "$1/$2.xz" > "$3/$2"' _ "$src" {} "$work"
+  (cd "$work" && grep -v '^#' "$manifest" | shasum -a 256 --check --quiet) || die "navmeshes failed verification against $manifest"
   mkdir -p "$DEST"
-  mv -f "$work"/navmesh/zone*.nav "$DEST/"
-  # Bot zone-border and walled-pocket data, built from these meshes (set classic-si-2 and later; roads.json from classic-si-3).
-  for f in seams.json pockets.json roads.json; do if [[ -f $work/navmesh/$f ]]; then mv -f "$work/navmesh/$f" "$DEST/"; fi; done
-  cp "$work/navmesh/MANIFEST.sha256" "$DEST/"
-  echo "Installed $(ls "$DEST"/zone*.nav | wc -l) navmeshes into $DEST"
+  mv -f "$work"/zone*.nav "$DEST/"
+  for f in "${DATA_FILES[@]}"; do if [[ -f $work/$f ]]; then mv -f "$work/$f" "$DEST/"; fi; done
+  cp "$manifest" "$DEST/MANIFEST.sha256"
+  echo "Installed $(ls "$DEST"/zone*.nav | wc -l | tr -d ' ') navmeshes into $DEST"
 }
 
 case "${1:-}" in
-  "")
-    for candidate in "$HERE/$ARCHIVE_NAME" "$HERE/../$ARCHIVE_NAME" "$PWD/$ARCHIVE_NAME"; do
-      [[ -f $candidate ]] && { install_archive "$candidate"; exit 0; }
-    done
-    [[ -n $NAVMESH_URL ]] || die "no $ARCHIVE_NAME found next to this folder, and no download URL is configured. Download it from the project's release page, put it next to this folder, and run this again (or use --from-archive)."
-    tmp="$HERE/.$ARCHIVE_NAME.download"
-    echo "Downloading $NAVMESH_URL ..."
-    curl -fL --retry 3 -C - "$NAVMESH_URL" -o "$tmp" || die "download failed"
-    curl -fsL "$NAVMESH_URL.sha256" -o "$tmp.sha256" || true
-    install_archive "$tmp"
-    rm -f "$tmp" "$tmp.sha256"
-    ;;
-  --from-archive)
-    install_archive "${2:?"usage: $0 --from-archive <file>"}"
+  --from-xz)
+    install_xz "${2:?"usage: $0 --from-xz <folder with *.xz>"}"
     ;;
   --from-dir)
     src=${2:?"usage: $0 --from-dir <folder with zone*.nav>"}
@@ -67,14 +53,14 @@ case "${1:-}" in
       cp -f "$f" "$DEST/"
       count=$((count + 1))
     done
-    for f in seams.json pockets.json roads.json; do if [[ -f $src/$f ]]; then cp -f "$src/$f" "$DEST/"; fi; done
+    for f in "${DATA_FILES[@]}"; do if [[ -f $src/$f ]]; then cp -f "$src/$f" "$DEST/"; fi; done
     echo "Installed $count navmeshes into $DEST"
     ;;
   --build-from-client)
-    die "--build-from-client is not available yet: the generator (tools/navmesh in the source) still needs its Wine automation. Use the default archive."
+    die "--build-from-client is not available on macOS: the generator (tools/navmesh in the source) needs Windows/Wine automation. Rebuild with daoc server install."
     ;;
   *)
-    sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'
     exit 2
     ;;
 esac

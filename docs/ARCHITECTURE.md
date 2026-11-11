@@ -5,9 +5,9 @@ How the system works today. For the reasoning that led here, see
 
 ## 1. What this is
 
-A Dark Age of Camelot server for Linux, built on an OpenDAoC fork. It hosts players from any
-machine together with two kinds of bots, and ships as **one portable folder**: no .NET install,
-no Wine, no Docker. The game client is not part of the project; players install it separately.
+A Dark Age of Camelot server for macOS (Apple Silicon), built on an OpenDAoC fork. It hosts
+players from any machine together with two kinds of bots, and ships as **one portable folder**:
+no .NET install, no Wine, no Docker. The game client is not part of the project; players install it separately.
 
 - **World:** Classic + Shrouded Isles (no Trials of Atlantis), the world of Offline DAoC 0.35.
 - **Classes:** the classic Classic + SI classes. The custom Sluaghbinder class exists in the code
@@ -32,40 +32,43 @@ project, not routine. See [UPSTREAM.md](../UPSTREAM.md).
 ## 3. The pieces
 
 ```
- build time (build box)                                 run time (portable folder)
- ──────────────────────                                 ──────────────────────────
+ build time (macOS, osx-arm64)                          run time (portable folder)
+ ─────────────────────────────                          ──────────────────────────
  src/*  ──dotnet publish──►  bin/ (self-contained)      daoc-server.sh ─► bin/CoreServer ─┐
- Pathing/Detour ──cmake──►  bin/lib/Detour.so                                            │
+ Pathing/Detour ──cmake──►  bin/lib/Detour.dylib                                          │
  OpenDAoC-Database (pinned)                             data/opendaoc.sqlite3.db ◄────────┤ world + saves
-   + world/patches ──WorldBuilder──► defaults/world.sqlite ─(first start)─► data/        │
- navmeshes ──package-navmeshes──► daoc-navmeshes-*.tar.xz ─navmesh-install─► navmesh/ ◄──┤ pathing
-                                                         config/ (serverconfig.xml, admins.json)
-                                                         run/admin.sock ◄── daoc-admin (TUI / CLI)
+   + world/patches ──WorldBuilder──► defaults/world.sqlite ─(first start)─► data/         │
+ world/navmesh/*.xz ──navmesh-install──► navmesh/ ◄────────────────────────────────────────┤ pathing
+                                                        config/ (serverconfig.xml, admins.json)
+                                                        run/admin.sock ◄── daoc-admin (TUI / CLI)
 ```
 
 | Project (`src/`) | Role |
 |---|---|
-| `CoreServer` | Host program (`CoreServer`): starts the game server, reads console commands, and handles SIGINT/SIGTERM/`exit` with a clean save. Linux-fixed in `project/`: no busy loop without stdin, and it exits on a failed start. |
-| `GameServer` | The game: OpenDAoC fork plus 0.33's changes. Contains `bots/` (all bot code), `admin/` (admin service) and `scripts/` (commands, NPCs, quests). |
+| `CoreServer` | Host program (`CoreServer`): starts the game server, reads console commands, and handles SIGINT/SIGTERM/`exit` with a clean save. No busy loop without stdin, and it exits on a failed start. |
+| `GameServer` | The game: OpenDAoC fork plus 0.33's changes. Contains `scripts/` (commands, NPCs, quests); the bot code (`src/Bots/`) is compiled into it. |
 | `CoreBase`, `CoreDatabase` | Shared libraries and the database layer (SQLite in practice; MySQL also supported). |
 | `Admin.Protocol` | Admin request/response types, command grammar and text output, shared by the server and the tools. |
 | `DaocAdmin` | `daoc-admin`: terminal GUI (Terminal.Gui 1.19, pinned) without arguments, CLI with arguments. |
 | `WorldBuilder` | Builds the world database from the upstream dump plus `world/patches`. |
-| `Pathing/Detour` | Native navmesh library (C++, CMake), loaded as `bin/lib/Detour.so`. |
+| `Pathing/Detour` | Native navmesh library (C++, CMake), loaded as `bin/lib/Detour.dylib`. |
 | `Tests` | NUnit, about 2,300 tests (about 60 bot-specific files). |
 
 ## 4. Runtime
 
 - **Start modes** (`deploy/daoc-server.sh`):
-  - `start` runs the server in the background (its own session) and opens the admin TUI in the
-    same terminal.
+  - `start` runs the server in the background (`nohup`, so closing the terminal does not stop it)
+    and opens the admin TUI in the same terminal.
+  - `start --detach` does the same without the TUI, and returns once the server is listening.
   - `start --console` runs it in the foreground; this is also used automatically without a
     terminal.
   - `stop` and `status` do what they say.
 - **Stopping always saves:** the TUI's Stop button, `daoc-admin server stop`, typing `exit`,
   Ctrl+C and SIGTERM all go through the same path.
 - **Admin plane:**
-  - `Admin.Host/AdminSocketHost` listens on `run/admin.sock` (mode 0600, no network port).
+  - `Admin.Host/AdminSocketHost` listens on `run/admin.sock` (mode 0600, no network port), or on
+    a short socket in the user's private temp folder when that path would be too long for a unix
+    socket (`deploy/admin-socket.sh`).
   - `AdminService` implements every operation: status, accounts and roles, bots, population,
     stop.
   - The server console accepts the same commands.
@@ -85,12 +88,12 @@ project, not routine. See [UPSTREAM.md](../UPSTREAM.md).
 | Server settings | `ServerProperty` table | In game: `/serverproperty`. Bot settings are in category `autonomous_population`. |
 | Config | `config/serverconfig.xml`, `logconfig.xml`, `invalidnames.txt`, `admins.json` | Created from `defaults/`; never overwritten by upgrades. |
 | Bot tuning | `bin/bot-goals.json` (optional; defaults built in) | Goal mix per level band; read at startup. |
-| Navmeshes | `navmesh/zone*.nav` (103 files, about 2 GB) plus `seams.json`, `pockets.json` and `roads.json` | Set `classic-si-4`; manifest `world/navmesh-manifest.sha256`. |
+| Navmeshes | `navmesh/zone*.nav` (103 files, about 2 GB) plus `seams.json`, `pockets.json` and `roads.json` | Set `classic-si-4`; installed from `world/navmesh/*.xz` against `world/navmesh-manifest.sha256`. |
 | Classic quests | `bin/classic-quests.json`, `bin/classic-quest-guides.json` (from `world/`) | Quest step markers, event spawns, quest monsters (`ClassicQuests`); Quest Guide pages (`QuestGuide`). Without them those are off. |
 
 **World pipeline** (`tools/build-release.sh`):
-1. `fetch-upstream-db.sh` downloads OpenDAoC-Database at the pinned commit and verifies a content
-   hash.
+1. `fetch-upstream-db.sh` unpacks the bundled OpenDAoC-Database at the pinned commit and verifies
+   a content hash.
 2. `WorldBuilder` creates every table from the server's own DataObjects and loads the dump's
    rows.
 3. `world/patches/*.sql` run in name order:
@@ -102,8 +105,8 @@ project, not routine. See [UPSTREAM.md](../UPSTREAM.md).
 The full guide is [BOTS-DEV.md](BOTS-DEV.md).
 - **Body:** `GameBot`, a `GameNPC` that implements `IGamePlayer`. It's an NPC made to behave like a
   player; that's why bot changes often touch core code.
-- **Brain:** `BotBrain` (think loop, combat) plus about 100 policy classes under `bots/` and
-  `bots/autonomous/`.
+- **Brain:** `BotBrain` (think loop, combat) plus about 100 policy classes under `src/Bots/` and
+  `src/Bots/autonomous/`.
 - **Autonomous bots:**
   - The roster lives in `offline_world_bots`.
   - `AutonomousPopulationController` logs them in at `bot_logins_per_second`.
@@ -113,25 +116,25 @@ The full guide is [BOTS-DEV.md](BOTS-DEV.md).
 
 ## 7. Decisions that stand
 
-- Linux-first portable folder; distrobox only for building (and on hosts that lack libicu).
+- macOS-first portable folder (osx-arm64, ad-hoc signed); the server needs nothing installed.
 - No Docker or Podman. No init-system integration; the server is a plain foreground process.
 - CLI first, TUI on top, no web UI. The admin socket is local only; remote admin goes over ssh.
 - Home network first; internet play is via router port forwarding (TCP 10300, UDP 10400).
 - Classic + SI only. The world is built from upstream data, with no Offline DAoC download.
-- Navmeshes ship in releases (default) and can be generated from a client (optional).
+- Navmeshes are in the source and ship inside the folder.
 - Bot AI is to become a separate, reloadable module, extracted step by step from the working code
   ([BOTS-DEV.md](BOTS-DEV.md), last section).
 
 ## 8. Known issues
 
-- **`/travel`** drives the local Windows game client's keyboard, so it does nothing on Linux or
+- **`/travel`** drives the local Windows game client's keyboard, so it does nothing on macOS or
   for remote players.
 - **`&tc`** is registered twice: Realm Exchange teleport and the transfer-corpse script. Startup
   logs a duplicate-key error.
 - **Upstream data gaps:** missing NPC templates and spells are logged at startup, inherited from
   0.33 and upstream data.
 - **Detour** ignores `fread` results, so a truncated navmesh file isn't detected.
-- **libicu is required:** the server hard-codes the `en-US` culture
-  (`CoreDatabase/ObjectDatabase.cs`).
-- **The navmesh generator** (`tools/navmesh`) is Windows-only, and the Wine automation for
-  `navmesh-install.sh --build-from-client` doesn't exist yet.
+- **ICU is required:** the server hard-codes the `en-US` culture (`CoreDatabase/ObjectDatabase.cs`);
+  macOS and the bundled .NET runtime provide it.
+- **The navmesh generator** (`tools/navmesh`) is Windows-only, and `navmesh-install.sh
+  --build-from-client` is not available on macOS.

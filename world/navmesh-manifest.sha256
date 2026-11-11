@@ -1,7 +1,7 @@
 # Navmesh set classic-si-4: the 103 zone navmeshes, seams.json, pockets.json and roads.json of Offline DAoC 0.37
 # (the v0.36b release's runtime/server/navmesh with the v0.37 game patch's pockets.json). Only pockets.json differs
 # from classic-si-3 (0.36); the 103 .nav files, seams.json and roads.json are unchanged. sha256  file.
-# Checked by tools/package-navmeshes.sh and deploy/navmesh-install.sh.
+# Checked by deploy/navmesh-install.sh.
 1c27f267dd74b83d3e1dac088ab14b46fc574b7081c8e0f05b665b9da1b9bef4  pockets.json
 4a8772ec8500a718e204650f875bf5722aefa3afebe2e582fbbbc34d5633e9e9  roads.json
 70774af9d79ee5f7bc75ef282d806dc85b0600869812f4c4db532d1a6b506357  seams.json
