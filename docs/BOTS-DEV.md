@@ -2,7 +2,7 @@
 
 Everything needed to change how bots behave: what kinds exist, how they live, where the code is,
 how to iterate quickly, and where the design is going. All bot code is in
-`src/GameServer/bots/` (C#).
+`src/GameServer/bots/` (C#, part of GameServer).
 
 ## 1. Three kinds of characters (never mix them up)
 
@@ -86,15 +86,15 @@ refresh.
 
 ## 5. The development loop
 
-Do this inside the build box (`distrobox enter daoc-server-box`), where the .NET SDK is.
+Do this on the Mac that has the .NET SDK (`tools/setup-dotnet.sh`).
 
 1. **Once, make a dev server folder:**
    ```bash
-   cd /path/to/repo && tools/build-release.sh          # on this Deck: /home/deck/Dev/vscode/OfflineDAoC-main/next
-   mkdir -p ~/next-test && tar -xzf dist/daoc-server-*-linux-x64.tar.gz -C ~/next-test
-   cp dist/daoc-navmeshes-classic-si-2.tar.xz* ~/next-test/ && ~/next-test/daoc-server/navmesh-install.sh
+   cd /path/to/repo && tools/build-release.sh && tools/pack.sh
+   mkdir -p ~/next-test && tar -xJf dist/daoc-server-*-osx-arm64.tar.xz -C ~/next-test
    ```
-   On this Steam Deck that folder already exists: `~/boxes/daoc-server-box-home/next-test/daoc-server`.
+   (The navmeshes are in the tarball. Or point `DAOC_SERVER_OUT` at the folder and run
+   `tools/build-release.sh` once.)
 2. **Edit** code under `src/GameServer/bots/`.
 3. **Deploy:** `tools/dev-deploy.sh ~/next-test/daoc-server`. It rebuilds the server DLLs (about
    15 s), copies them into `bin/`, and restarts the server if it was running. The world, bots and
@@ -131,7 +131,7 @@ needs a full `tools/build-release.sh`.
 | Chat | `autonomous/AutonomousBotChat*.cs`, `AutonomousChatIntentModel.cs`, `AutonomousChatKnowledge.cs`, `autonomous/RealmEventBanter.cs` |
 | Economy: Realm Exchange, selling | `autonomous/AutonomousBotEconomy.cs`, `AutonomousAuctionValuation.cs`, `AutonomousSupplyMerchantSpace.cs` |
 | Population and logins | `autonomous/AutonomousPopulationController.cs`, `AutonomousPopulationProperties.cs`, `AutonomousPopulationRamp.cs`, `AutonomousRealmLoginBalancer.cs` |
-| Admin operations | `GameServer/admin/BotRosterAdmin.cs` |
+| Admin operations | `src/GameServer/admin/BotRosterAdmin.cs` |
 
 ## 7. Conventions
 

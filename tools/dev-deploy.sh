@@ -5,8 +5,8 @@
 #
 #   tools/dev-deploy.sh [server folder]    default: $DAOC_HOME, else ~/next-test/daoc-server
 #
-# Run it where the .NET SDK is (the build box). The server folder must come from a release build
-# (tools/build-release.sh); this only replaces the server's own DLLs in its bin/.
+# The server folder must come from a release build (tools/build-release.sh, or `daoc server install`);
+# this only replaces the server's own DLLs in its bin/.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -38,8 +38,7 @@ for name in GameServer CoreBase CoreDatabase Admin.Protocol; do
 done
 
 if $was_running; then
-  echo "== Restarting in the background (log: logs/console.out; reopen the admin screen with ./daoc-admin)"
-  mkdir -p "$DEST/logs"
-  setsid "$DEST/daoc-server.sh" start --console </dev/null >"$DEST/logs/console.out" 2>&1 &
+  echo "== Restarting in the background (log: logs/console.out; open the admin screen with ./daoc-admin)"
+  "$DEST/daoc-server.sh" start --detach </dev/null
 fi
 echo "== Done"

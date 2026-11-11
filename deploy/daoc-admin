@@ -2,9 +2,11 @@
 # daoc-admin - manage the running server in this folder.
 #   ./daoc-admin              terminal GUI (server log, bots, population, accounts)
 #   ./daoc-admin help         list commands; e.g. ./daoc-admin bots list
+# macOS port of the Linux repo's deploy/daoc-admin (functionally identical).
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export DAOC_ADMIN_SOCKET="${DAOC_ADMIN_SOCKET:-$HERE/run/admin.sock}"
+. "$HERE/admin-socket.sh"
+export DAOC_ADMIN_SOCKET="${DAOC_ADMIN_SOCKET:-$(admin_socket "$HERE")}"
 export DAOC_SERVER_LOG="${DAOC_SERVER_LOG:-$HERE/logs/console.out}"
 
 "$HERE/bin/DaocAdmin" "$@"
