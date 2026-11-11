@@ -64,9 +64,9 @@ done < <(cd "$SERVER" && find . -mindepth 1 -maxdepth 1 | sed 's|^\./||' | LC_AL
 echo "== Packing $SERVER as $(basename "$TARBALL")"
 # System bsdtar into a multithreaded xz (bsdtar's own xz filter, even with --options xz:threads=0,
 # compresses on one thread: about 14 minutes instead of about one). COPYFILE_DISABLE and
-# --no-mac-metadata keep AppleDouble (._*) files and extended attributes out; owner fields are
+# --no-mac-metadata/--no-xattrs keep AppleDouble (._*) files and extended attributes out; owner fields are
 # neutral so no local user name ships. pipefail (above) fails the pack if either side fails.
-COPYFILE_DISABLE=1 /usr/bin/tar --no-mac-metadata --uid 0 --gid 0 --uname root --gname wheel \
+COPYFILE_DISABLE=1 /usr/bin/tar --no-mac-metadata --no-xattrs --uid 0 --gid 0 --uname root --gname wheel \
   -s "|^|$ROOT_NAME/|S" -cf - -C "$SERVER" "${entries[@]}" | xz -T0 -6 -c > "$PARTIAL"
 mv -f "$PARTIAL" "$TARBALL"
 

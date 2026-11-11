@@ -1,6 +1,6 @@
 # Navmesh set classic-si-2: the 103 zone navmeshes, seams.json and pockets.json of Offline DAoC 0.35
 # (upstream release v0.35b, runtime/server/navmesh; rebuilt by its OpenDAoC-BuildNav). sha256  file.
-# Checked by tools/package-navmeshes.sh and deploy/navmesh-install.sh.
+# Checked by deploy/navmesh-install.sh.
 4d6b9a6b95bf69075ea0a3ff835eb4af2295020963df04c59f54962c2549b248  pockets.json
 70774af9d79ee5f7bc75ef282d806dc85b0600869812f4c4db532d1a6b506357  seams.json
 b51b12f5a763ca2ae0f7e1cbe571db6db08e9683e1ec2d3ad1ca0b97a247312e  zone000.nav
