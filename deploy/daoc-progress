@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# daoc-progress - carry saved progress into a new world (after an upgrade that ships new world
+# data) or import progress from another save. ./daoc-progress with no arguments lists the commands.
+# Upstream Offline DAoC's IMPORT PROGRESS engine; see the README.
+set -uo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# upgrade and import refuse by themselves while this server (or the source's server) is running;
+# inspect only reads a copy, so it works either way.
+DAOC_HOME="$HERE" exec "$HERE/bin/DaocProgress" "$@"
