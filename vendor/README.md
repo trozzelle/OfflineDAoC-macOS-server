@@ -1,9 +1,10 @@
 # Vendored System.Data.SQLite (1.0.119)
 
-The Linux repo builds against the NuGet package `System.Data.SQLite.Core` 1.0.119, whose native
+The server's SQLite provider is the NuGet package `System.Data.SQLite.Core` 1.0.119, whose native
 `SQLite.Interop` binary ships prebuilt for win-x86/x64, linux-x64 and **osx-x64** — there is no
 osx-arm64 build, and its interop exports hashed symbol names (`SI0…`) that cannot be reproduced
-from the public source.
+from the public source. The macOS build therefore replaces the package's managed assembly with
+one built from this directory.
 
 This directory vendors the managed project source for that exact version (1.0.119.0, source id
 `412ff082182b121d74a9ced16159bd0eb496deef`) from the System.Data.SQLite fossil
@@ -26,5 +27,4 @@ it binds the macOS system `libsqlite3` through plain, fixed-argument entry point
 server, DaocAdmin and WorldBuilder outputs (and deletes the stub package's `runtimes/` tree) so
 no output ever probes `SQLite.Interop.dll`.
 
-Reference: Linux repo `UPSTREAM.md` pins OpenDAoC-Database; this vendoring concerns only the
-ADO.NET provider, not game data.
+This concerns only the ADO.NET provider, not game data; `UPSTREAM.md` pins OpenDAoC-Database.

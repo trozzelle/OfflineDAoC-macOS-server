@@ -1,26 +1,34 @@
 # Releasing and maintaining the data
 
-## Publishing a release on GitHub
+## How a release is published
 
-1. Build in the box: `tools/setup-build-box.sh --build` (or `tools/build-release.sh` inside it).
-2. Tag first if you want a real version name: `git tag v0.34 && tools/build-release.sh`. The
-   version comes from `git describe`.
-3. Create a GitHub release and attach:
-   - `dist/daoc-server-<version>-linux-x64.tar.gz` (server and world, ~85 MB);
-   - `dist/daoc-navmeshes-classic-si-4.tar.xz` and its `.sha256` (~360 MB; make it with
-     `tools/package-navmeshes.sh`), for people who use the
-     release instead of building from source. Upload it once per navmesh set: attach it to every
-     release, or keep a dedicated `navmeshes-classic-si-4` release and link to it.
+The `macos-build` workflow (`.github/workflows/macos-build.yml`) does it; nobody uploads by hand.
 
-   People building from source don't need this; the navmeshes are in the source
-   (`world/navmesh/`).
-4. Put the navmesh download URL in `deploy/release.conf`
-   (`NAVMESH_URL=https://github.com/trozzelle/OfflineDAoC-macOS-server/releases/download/<tag>/daoc-navmeshes-classic-si-4.tar.xz`),
-   commit, and rebuild. `./navmesh-install.sh` with no arguments then downloads it automatically
-   when the archive isn't next to the folder.
+- **Triggers:** a push to `main` or to a `macos-*` branch, a pull request, or a manual run
+  (`workflow_dispatch`).
+- **Build:** on a `macos-latest` runner: the deploy-script tests (`python3 -m unittest discover -s
+  tools/tests`), then `tools/build-release.sh`, then `tools/pack.sh`. A pull request stops here.
+- **Publish:** on a push or manual run, a second job (the only one with `contents: write`) uploads
+  the tarball and its `.sha256` to the GitHub release `macos-<game version>-<12-char commit>`,
+  creating it if it is missing (not marked latest; the notes say it is a macOS build of that
+  commit). If that release already has the tarball, the job uploads nothing and succeeds.
+- **Never replaced:** a published asset is never deleted or overwritten. OfflineDAoC-macOS pins its
+  SHA-256, so a rebuilt tarball of the same commit would break every install that pins it. A new
+  build means a new commit, hence a new release.
+
+The asset is `daoc-server-<game version>-<12-char commit>-osx-arm64.tar.xz` with a `.sha256` file.
+Its layout and `.daoc-pin.json` are part of the interface with OfflineDAoC-macOS (see the README).
+
+**Shipping a game version:** work for the next Offline DAoC version lands on `main`. When
+OfflineDAoC-macOS ships it, cut `macos-<version>` from `main`; fixes for a shipped version go on
+its branch, and each push there publishes a new release for that commit. OfflineDAoC-macOS then
+pins the new commit and tarball.
+
+To make the same tarball locally: `tools/build-release.sh` and then `tools/pack.sh` (see
+[BUILD.md](BUILD.md)).
 
 Never attach or commit a played database, logs, `serverconfig.xml` or `admins.json`.
-`.gitignore` covers `dist/`, `.cache/`, `*.db`, `*.sqlite`, `*.nav` and logs.
+`.gitignore` covers `dist/`, `build/`, `.cache/`, `*.db`, `*.sqlite`, `*.nav` and logs.
 
 ## Navmeshes
 
@@ -31,17 +39,18 @@ changes 3 meshes adds about 20 MB to the repo, not a whole new archive. The curr
 meshes plus the three bot data files (zone borders, walled pockets, roads) from Offline DAoC 0.37
 (see `UPSTREAM.md`).
 
+`tools/build-release.sh` installs them into the server folder with
+`navmesh-install.sh --from-xz world/navmesh`, verifying every file against the manifest.
+
 ```bash
-tools/navmesh-unpack.sh <folder>      # repo -> verified folder (build-release.sh does this)
 tools/navmesh-stage.sh <folder>       # folder of new meshes -> repo; only changed files are recompressed
-tools/package-navmeshes.sh            # repo -> dist/daoc-navmeshes-<set>.tar.xz for a release (~4 min)
 ```
 
 **New meshes from an Offline DAoC release:** read them out of the release zip
 (`tools/world/rangezip.py`, folder `runtime/server/navmesh/`), run `tools/navmesh-stage.sh <folder>`,
 `git add world/navmesh world/navmesh-manifest.sha256`, build, retest the bots (their route data,
 `Bots/autonomous/data/*.json`, was tuned on the current set). If the set is a new one, also change
-its name in the manifest header and in `deploy/navmesh-install.sh` (`SET=`) and `release.conf`.
+its name in the manifest header and in `release.conf`.
 
 ## The world: upstream database pin and the Offline DAoC delta
 

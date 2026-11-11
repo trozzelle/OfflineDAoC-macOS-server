@@ -16,18 +16,16 @@ doc for your task:
 
 ## What this is
 
-A Linux-first **Dark Age of Camelot server** (OpenDAoC fork, .NET 10, SQLite) with
+A **Dark Age of Camelot server** for macOS on Apple Silicon (OpenDAoC fork, .NET 10, SQLite) with
 **autonomous gamebots** and **companion bots**. It's released as one portable folder with a
-built-in Classic + Shrouded Isles world; navmeshes ship as a separate archive. The game client is
+built-in Classic + Shrouded Isles world and its navmeshes. The game client is
 not part of the project. The owner's goal now is to **develop the bots**: smarter, natural
 behaviour, dungeons, battlegrounds, keeps and frontier, and later chat.
 
-## Folders (on the owner's Steam Deck)
+## Folders
 
-| Folder | What |
-|---|---|
-| `~/Dev/vscode/daoc-offline-linux-server-bots/` | **This repo** (clone of github.com/catastrophic-impact/daoc-offline-linux-server-bots). All work happens here. |
-| `~/boxes/daoc-server-box-home/` | The build box's home: `.dotnet/` (SDK), caches. No source. Put test server folders here (e.g. `test/daoc-server`). |
+This repo is a clone of github.com/trozzelle/OfflineDAoC-macOS-server; all work happens here.
+Build output goes to `dist/` and `build/` (both gitignored); the .NET SDK is in `~/.dotnet`.
 
 Upstream is https://github.com/shadowofze/OfflineDAoC (see `UPSTREAM.md`); clone it to a scratch
 folder when you need to compare or pull. Its release zips hold the world DB and navmeshes.
@@ -35,25 +33,23 @@ folder when you need to compare or pull. Its release zips hold the world DB and 
 
 ## Environment and how to run things
 
-- **Host:** SteamOS (read-only root). **Build box:** distrobox `daoc-server-box` (Ubuntu 22.04),
-  home `~/boxes/daoc-server-box-home`, .NET SDK at `~/.dotnet/dotnet` inside it. If the box or SDK
-  is missing, run `tools/setup-build-box.sh` on the host (safe to re-run).
-- The box sees `/home/deck` directly: build the repo in place. Inside the box, `~` is the box home.
-- **From an editor sandbox (VS Code flatpak)**, host commands need `flatpak-spawn --host ...`, and
-  box commands
-  `flatpak-spawn --host distrobox enter daoc-server-box -- bash -lc '...'`. The sandbox `/tmp` is
-  private; put shared files under the box home.
-- **No git identity is set globally;** the repo has a local one (catastrophic-impact noreply).
+- **Host:** an Apple Silicon Mac with the Xcode Command Line Tools and cmake. If the .NET 10 SDK is
+  missing, run `tools/setup-dotnet.sh` (safe to re-run).
 - **Healthy startup logs ~390 ERR.** It is upstream's own data (see the 0.36 sync notes); watch for changes, not the number.
-- **Common commands** (inside the box, from the repo root):
+- **Common commands** (from the repo root):
   - Build and test: `cd src && ~/.dotnet/dotnet build DaocServer.sln -c Release && ~/.dotnet/dotnet test Tests/Tests.csproj -c Release --no-build`
-  - Full release: `tools/build-release.sh`. About 3 minutes; creates `dist/daoc-server`.
-  - Test server: copy `dist/daoc-server` to `~/test/daoc-server` (box home), then
+  - Deploy-script tests: `python3 -m unittest discover -s tools/tests`
+  - Full release: `tools/build-release.sh`. About 2 minutes; creates `dist/daoc-server`.
+    `tools/pack.sh` then packs it as the release tarball.
+  - Test server: copy `dist/daoc-server` to `~/test/daoc-server`, then
     `tools/dev-deploy.sh ~/test/daoc-server` for quick code updates (about 15 s).
-  - Run it (host or box): `<folder>/daoc-server.sh start` (or `start --console`); admin:
+  - Run it: `<folder>/daoc-server.sh start` (or `start --console`); admin:
     `<folder>/daoc-admin bots list` and so on.
 - **Ports:** game TCP 10300, UDP 10400. Only one server at a time. Check with
-  `ss -ltnp | grep 10300` (on the host) before starting.
+  `lsof -nP -iTCP:10300` before starting.
+- **The interface with OfflineDAoC-macOS** (folder layout, script flags, `daoc-admin --json`, the
+  admin socket rule, the tarball and `.daoc-pin.json`) is described in the README; changing it
+  needs a matching change there.
 
 ## Gotchas
 
@@ -73,7 +69,7 @@ folder when you need to compare or pull. Its release zips hold the world DB and 
   (docs/RELEASING.md).
 - **Don't trust "it compiles":** check bot behaviour on the dev server (TUI Bots tab, `/tele`,
   `logs/server.log`).
-- **`/travel` doesn't work on Linux** (it drives the Windows client's keyboard). `&tc` is
+- **`/travel` doesn't work on macOS** (it drives the Windows client's keyboard). `&tc` is
   registered twice. Both are known issues (docs/ARCHITECTURE.md §8).
 
 ## Rules

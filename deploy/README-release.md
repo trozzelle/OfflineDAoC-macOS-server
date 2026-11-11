@@ -1,25 +1,21 @@
-# DAoC Server (portable Linux build)
+# DAoC Server (macOS build)
 
-A self-contained DAoC server with autonomous and companion bots. It needs no .NET install and
-no game client. Unpack it anywhere: a normal Linux system, or a distrobox if your system is
-read-only (like SteamOS).
+A self-contained DAoC server with autonomous and companion bots for Apple Silicon Macs. It needs
+no .NET install and no game client. It is normally installed and updated by OfflineDAoC-macOS
+(`daoc server install`); you can also unpack the release tarball anywhere.
 
-Requirements: x86-64 Linux with glibc 2.34 or newer (Ubuntu 22.04+, Debian 12+, Fedora 35+, SteamOS). Needs `libicu` (installed on almost every desktop distro and on SteamOS).
+Requirements: an Apple Silicon Mac running a current macOS. If macOS refuses to open a file
+because it was downloaded, remove the quarantine flag once: `xattr -dr com.apple.quarantine <folder>`.
 
-## 1. Install navmeshes (once)
+## 1. Navmeshes
 
-Navmeshes let NPCs and bots walk around obstacles. The world itself is built in: a fresh
-Classic + Shrouded Isles world (the Offline DAoC 0.35 world) is created on first start.
+Navmeshes let NPCs and bots walk around obstacles. They are already installed in `navmesh/`, and
+the world itself is built in: a fresh Classic + Shrouded Isles world (the Offline DAoC 0.37 world)
+is created on first start.
 
-Download `daoc-navmeshes-classic-si-3.tar.xz` (~360 MB) from the release page, put it next to the
-server folder, and run:
-
-```bash
-./navmesh-install.sh
-```
-
-The navmeshes are verified file by file. Alternatives: `--from-archive <file>`, or
-`--from-dir <folder>` to reuse another server's `zone*.nav`.
+To reuse the meshes of another server, run `./navmesh-install.sh --from-dir <folder>` with the
+folder that holds its `zone*.nav` files. Generating meshes from a game client is not available on
+macOS.
 
 ## 2. Run and manage it
 
@@ -55,7 +51,8 @@ The same actions also work as single commands:
 
 `./daoc-server.sh start --console` gives the raw server console in the foreground instead. Type
 the same commands there, and use `exit` or Ctrl+C to save and stop. It is used automatically when
-there is no terminal (an init system, for example).
+there is no terminal. `./daoc-server.sh start --detach` starts the server in the background, waits
+until it is ready and returns without opening the admin screen.
 
 Notes:
 - Roles are stored in the database and in `config/admins.json`. You may also list account names
@@ -63,8 +60,9 @@ Notes:
 - New bots log in within seconds (at most `bot_logins_per_second`, default 8, per second).
 - `population off` logs every bot out of the world. Their characters are kept.
 - Logs: `logs/console.out` (this run) and `logs/server.log`.
-- The admin tools only work for the user running the server. They use `run/admin.sock` and open
-  no network port. For remote admin, ssh in.
+- The admin tools only work for the user running the server. They use `run/admin.sock` (or a
+  short socket in your private temp folder when the folder path is very long) and open no
+  network port. For remote admin, ssh in.
 
 ## 3. Connect
 
@@ -76,5 +74,7 @@ Accounts are created on first login, or with `./daoc-admin accounts create <name
 
 ## Upgrading
 
-Replace `bin/`, `defaults/` and the scripts with the new release. `config/`, `data/` and
-`navmesh/` are yours and are kept.
+Replace `bin/`, `defaults/` and the scripts with the new release (`daoc server update` does this).
+`config/`, `data/`, `logs/` and `run/` are yours and are kept; so is `navmesh/` unless the new
+release comes with a new navmesh set. A new release's world data does not reach an existing
+`data/`: the world is copied in only on first start.

@@ -86,15 +86,15 @@ refresh.
 
 ## 5. The development loop
 
-Do this inside the build box (`distrobox enter daoc-server-box`), where the .NET SDK is.
+Do this on the Mac that has the .NET SDK (`tools/setup-dotnet.sh`).
 
 1. **Once, make a dev server folder:**
    ```bash
-   cd /path/to/repo && tools/build-release.sh          # on this Deck: /home/deck/Dev/vscode/OfflineDAoC-main/next
-   mkdir -p ~/next-test && tar -xzf dist/daoc-server-*-linux-x64.tar.gz -C ~/next-test
-   cp dist/daoc-navmeshes-classic-si-3.tar.xz* ~/next-test/ && ~/next-test/daoc-server/navmesh-install.sh
+   cd /path/to/repo && tools/build-release.sh && tools/pack.sh
+   mkdir -p ~/next-test && tar -xJf dist/daoc-server-*-osx-arm64.tar.xz -C ~/next-test
    ```
-   On this Steam Deck that folder already exists: `~/boxes/daoc-server-box-home/next-test/daoc-server`.
+   (The navmeshes are in the tarball. Or point `DAOC_SERVER_OUT` at the folder and run
+   `tools/build-release.sh` once.)
 2. **Edit** code under `src/Bots/`.
 3. **Deploy:** `tools/dev-deploy.sh ~/next-test/daoc-server`. It rebuilds the server DLLs (about
    15 s), copies them into `bin/`, and restarts the server if it was running. The world, bots and
