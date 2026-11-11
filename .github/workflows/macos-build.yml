@@ -1,0 +1,82 @@
+name: macos-build
+
+on:
+  push:
+    branches: [main, 'macos-*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-latest
+    outputs:
+      tarball: ${{ steps.pack.outputs.tarball }}
+      tag: ${{ steps.pack.outputs.tag }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        with:
+          # The build version and the packed record come from the commit; a shallow clone is enough.
+          fetch-depth: 1
+      - name: Deploy script tests
+        run: python3 -m unittest discover -s tools/tests -v
+      - name: Install cmake and xz if missing
+        run: |
+          command -v cmake >/dev/null || brew install cmake
+          command -v xz >/dev/null || brew install xz
+      - name: Install the .NET 10 SDK
+        run: tools/setup-dotnet.sh
+      - name: Build the server
+        run: tools/build-release.sh
+      - name: Pack
+        id: pack
+        run: |
+          tools/pack.sh dist/release
+          tarball=$(cd dist/release && ls daoc-server-*-osx-arm64.tar.xz)
+          # daoc-server-<game version>-<12-char commit>-osx-arm64.tar.xz -> macos-<game version>-<12-char commit>
+          tag=$(echo "$tarball" | sed -e 's/^daoc-server-/macos-/' -e 's/-osx-arm64\.tar\.xz$//')
+          echo "tarball=$tarball" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: daoc-server-macos
+          path: |
+            dist/release/*.tar.xz
+            dist/release/*.sha256
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    # Pull requests build and pack only.
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TARBALL: ${{ needs.build.outputs.tarball }}
+      TAG: ${{ needs.build.outputs.tag }}
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
+        with:
+          name: daoc-server-macos
+          path: release
+      - name: Publish to the release for this build
+        run: |
+          # A published asset is never replaced: released manifests pin its hash.
+          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --latest=false \
+              --title "$TAG" \
+              --notes "macOS build of commit $GITHUB_SHA: the Offline DAoC server for OfflineDAoC-macOS (Apple Silicon)." ||
+              gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null   # another run created it first
+          fi
+          assets=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')
+          if grep -qxF "$TARBALL" <<<"$assets"; then
+            echo "$TAG already has $TARBALL; nothing to upload"
+            exit 0
+          fi
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" "release/$TARBALL"
+          grep -qxF "$TARBALL.sha256" <<<"$assets" || gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" "release/$TARBALL.sha256"
