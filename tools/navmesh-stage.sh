@@ -8,6 +8,7 @@
 # 3 of 103 meshes adds ~20 MB, not another 360 MB. A file whose SHA-256 already matches the
 # manifest is NOT recompressed (xz output can differ between versions, which would defeat this).
 # Run it after reading the new meshes out of the release zip (tools/world/rangezip.py).
+# macOS: bash 3.2, shasum -a 256 and xz (brew install xz).
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -19,16 +20,16 @@ SOURCE_NOTE="${NAVMESH_SOURCE_NOTE:-}"
 
 compgen -G "$SRC/zone*.nav" >/dev/null || { echo "navmesh-stage: no zone*.nav in $SRC" >&2; exit 1; }
 mkdir -p "$DEST"
-declare -A old=()
-if [[ -f $MANIFEST ]]; then while read -r sum file; do [[ $sum == \#* || -z $file ]] || old[$file]=$sum; done <"$MANIFEST"; fi
+# The manifest's own hash for a file, "" when it has none (no associative arrays in bash 3.2).
+old_sum() { [[ -f $MANIFEST ]] && awk -v f="$1" '$1 !~ /^#/ && $2 == f {print $1; exit}' "$MANIFEST" || true; }
 
 new="$(mktemp)"; trap 'rm -f "$new"' EXIT
 changed=0; kept=0
 for path in "$SRC"/zone*.nav "$SRC"/seams.json "$SRC"/pockets.json "$SRC"/roads.json; do
   [[ -f $path ]] || continue
-  f=$(basename "$path"); sum=$(sha256sum "$path" | cut -d' ' -f1)
+  f=$(basename "$path"); sum=$(shasum -a 256 "$path" | cut -d' ' -f1)
   printf '%s  %s\n' "$sum" "$f" >>"$new"
-  if [[ ${old[$f]:-} == "$sum" && -s $DEST/$f.xz ]]; then kept=$((kept + 1)); continue; fi
+  if [[ $(old_sum "$f") == "$sum" && -s $DEST/$f.xz ]]; then kept=$((kept + 1)); continue; fi
   xz -6 -T0 -c "$path" >"$DEST/$f.xz.tmp" && mv "$DEST/$f.xz.tmp" "$DEST/$f.xz"
   echo "staged $f"; changed=$((changed + 1))
 done

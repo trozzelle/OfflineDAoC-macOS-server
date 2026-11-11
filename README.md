@@ -118,7 +118,7 @@ in OfflineDAoC-macOS**, released together; do not change it on its own.
   `deploy/serverconfig.template.xml`, `world/patches/`, `world/classic-quests.json`,
   `world/classic-quest-guides.json` and `world/navmesh/` stay where they are.
 
-## ## What's in the game
+## What's in the game
 
 - **World:** Classic + Shrouded Isles (the Offline DAoC 0.36 world), with Darkness Falls, the
   Realm Exchange and stablemaster routes.
