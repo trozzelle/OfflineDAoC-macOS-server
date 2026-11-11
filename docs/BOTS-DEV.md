@@ -28,7 +28,7 @@ and the property calculators.
 targets, spells, styles and movement, delegating to the policy classes.
 
 **Autonomous bot lifecycle:**
-1. **Created:** `admin/BotRosterAdmin.Create` writes a row in **`offline_world_bots`** (identity
+1. **Created:** `Admin.Host/BotRosterAdmin.Create` writes a row in **`offline_world_bots`** (identity
    from `AutonomousBotIdentityGenerator`). Level-50 bots also get gear from
    **`offline_level50_loadouts`**.
 2. **Logged in:** `AutonomousPopulationController` polls once per second. With the population on,

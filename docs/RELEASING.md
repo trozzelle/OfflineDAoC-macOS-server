@@ -75,11 +75,6 @@ a new release, skip step 1):
    (for 0.36: SHA-256 `4fdb7ca4…`, also listed in the plain release's `download-manifest.json`).
    The zip is split in parts, so read the one file with HTTP range requests rather than downloading
    it all (see `tools/world/rangezip.py`).
-   From 0.37 a release is an update to the 0.36 base (`"Mode": "patch"` in its
-   `download-manifest.json`) and ships no database: take the 0.36 plain DB above and apply the game
-   patch's (`OfflineDAoC-v<x>-game-patch.zip` on the v<x>b release) `db-<x>.json` to it with
-   `python3 tools/world/apply-release-update.py <db> db-<x>.json`. Its counts must match the JSON's
-   `Summary`, with no rows "left as the game had them".
    Set `WORLD` at the top of the script to the release, then
    `python3 tools/world/derive-world-delta.py <pristine db> /tmp/upstream.sqlite world/patches`
    (it removes nothing itself: delete the old `200-*` files first). Check the script's `EXCLUDED`
