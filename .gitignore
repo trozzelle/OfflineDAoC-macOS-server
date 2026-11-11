@@ -31,3 +31,6 @@ src/build/
 build/
 dist/
 .cache/
+
+# Python bytecode
+__pycache__/
