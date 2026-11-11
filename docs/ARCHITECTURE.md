@@ -46,7 +46,7 @@ project, not routine. See [UPSTREAM.md](../UPSTREAM.md).
 | Project (`src/`) | Role |
 |---|---|
 | `CoreServer` | Host program (`CoreServer`): starts the game server, reads console commands, and handles SIGINT/SIGTERM/`exit` with a clean save. No busy loop without stdin, and it exits on a failed start. |
-| `GameServer` | The game: OpenDAoC fork plus 0.33's changes. Contains `bots/` (all bot code), `admin/` (admin service) and `scripts/` (commands, NPCs, quests). |
+| `GameServer` | The game: OpenDAoC fork plus 0.33's changes. Contains `scripts/` (commands, NPCs, quests); the bot code (`src/Bots/`) is compiled into it. |
 | `CoreBase`, `CoreDatabase` | Shared libraries and the database layer (SQLite in practice; MySQL also supported). |
 | `Admin.Protocol` | Admin request/response types, command grammar and text output, shared by the server and the tools. |
 | `DaocAdmin` | `daoc-admin`: terminal GUI (Terminal.Gui 1.19, pinned) without arguments, CLI with arguments. |
@@ -105,8 +105,8 @@ project, not routine. See [UPSTREAM.md](../UPSTREAM.md).
 The full guide is [BOTS-DEV.md](BOTS-DEV.md).
 - **Body:** `GameBot`, a `GameNPC` that implements `IGamePlayer`. It's an NPC made to behave like a
   player; that's why bot changes often touch core code.
-- **Brain:** `BotBrain` (think loop, combat) plus about 100 policy classes under `bots/` and
-  `bots/autonomous/`.
+- **Brain:** `BotBrain` (think loop, combat) plus about 100 policy classes under `src/Bots/` and
+  `src/Bots/autonomous/`.
 - **Autonomous bots:**
   - The roster lives in `offline_world_bots`.
   - `AutonomousPopulationController` logs them in at `bot_logins_per_second`.
