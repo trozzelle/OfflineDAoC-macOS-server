@@ -35,10 +35,16 @@ SDS_PROJ="$SDS_SRC/System.Data.SQLite.NetStandard21.csproj"
 DOTNET="${DOTNET:-${DOTNET_ROOT:-$HOME/.dotnet}/dotnet}"
 [[ -x $DOTNET ]] || DOTNET="${DOTNET:-$(command -v dotnet || true)}"
 # The Offline DAoC game version this checkout implements: DAOC_GAME_VERSION, else the
-# OfflineDaocVersion constant in the admin service. Its Sluaghbinder overlay lives in
-# world/editions/<version>/.
-GAME_VERSION="${DAOC_GAME_VERSION:-$(sed -n 's/.*OfflineDaocVersion *= *"\([^"]*\)".*/\1/p' "$HERE/src/Admin.Host/AdminService.cs" 2>/dev/null | sed -n 1p)}"
-[[ -n $GAME_VERSION ]] || { echo "build-release: cannot read OfflineDaocVersion from src/Admin.Host/AdminService.cs (set DAOC_GAME_VERSION)" >&2; exit 1; }
+# OfflineDaocVersion constant in AdminService.cs (src/Admin.Host/ or src/GameServer/admin/,
+# depending on the version). Its Sluaghbinder overlay lives in world/editions/<version>/.
+GAME_VERSION="${DAOC_GAME_VERSION:-}"
+if [[ -z $GAME_VERSION ]]; then
+  while IFS= read -r f; do
+    GAME_VERSION="$(sed -n 's/.*OfflineDaocVersion *= *"\([^"]*\)".*/\1/p' "$f" | sed -n 1p)"
+    [[ -z $GAME_VERSION ]] || break
+  done < <(find "$HERE/src" -maxdepth 3 -name AdminService.cs -not -path '*/obj/*' -not -path '*/bin/*' 2>/dev/null | sort)
+fi
+[[ -n $GAME_VERSION ]] || { echo "build-release: no OfflineDaocVersion = \"<version>\" constant found in any src/**/AdminService.cs (set DAOC_GAME_VERSION)" >&2; exit 1; }
 # <game version>-<12-char commit>, plus -dirty when tracked files have uncommitted changes.
 COMMIT="$(git -C "$HERE" rev-parse --short=12 HEAD 2>/dev/null)" ||
   { echo "build-release: $HERE is not a git checkout with a commit" >&2; exit 1; }
