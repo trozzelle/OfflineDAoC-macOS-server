@@ -1,64 +1,80 @@
 # Building
 
-The build produces a portable server folder. It runs on x86-64 Linux with glibc 2.34+ and libicu,
-with or without distrobox, and needs no .NET install. To run it, see [RUN.md](RUN.md); to
-publish it, see [RELEASING.md](RELEASING.md).
+The build produces a portable server folder for Apple Silicon Macs (osx-arm64) that needs no .NET
+install. To run it, see [RUN.md](RUN.md); to publish it, see [RELEASING.md](RELEASING.md).
 
 ```
-dist/daoc-server/                              portable server folder, ready to start (world and navmeshes installed)
-dist/daoc-server-<version>-linux-x64.tar.gz    the folder without navmeshes, as one archive (~85 MB)
-dist/daoc-navmeshes-classic-si-2.tar.xz        the navmeshes (~360 MB), joined from world/navmesh/ parts
+dist/daoc-server/                                          portable server folder, ready to start (world and navmeshes installed)
+dist/daoc-server-<game version>-<commit>-osx-arm64.tar.xz  the folder as one archive (tools/pack.sh; about 450 MB)
+dist/daoc-server-<...>.tar.xz.sha256                       its checksum
 ```
 
 No client files are included.
 
-## Option A: inside a distrobox (recommended; use it for releases)
+## What you need
 
-On the host, from the repository root:
-
-```bash
-tools/setup-build-box.sh --build
-```
-
-This does three things, and is safe to re-run:
-1. Creates the `daoc-server-box` distrobox (Ubuntu 22.04) with its own home
-   (`~/boxes/daoc-server-box-home`; change with `BOX_NAME` and `BOX_HOME`).
-2. Installs the .NET 10 SDK, cmake and g++ inside it.
-3. Builds.
-
-Without `--build`, it only prepares the box. Building on Ubuntu 22.04 keeps the native pathing
-library compatible with glibc 2.34+ systems.
-
-## Option B: on your own system
-
-Requirements:
-- the .NET 10 SDK (`dotnet` on PATH, `~/.dotnet/dotnet`, or `DOTNET=...`);
-- `cmake`, `g++` and `curl`;
-- internet access on the first build.
-
-Then run `tools/build-release.sh`. The result needs your system's glibc version or newer.
+- An Apple Silicon Mac with the Xcode Command Line Tools (`xcode-select --install`: clang, git,
+  `tar`, `codesign`).
+- `cmake` and `xz` (`brew install cmake xz`) and curl.
+- The .NET 10 SDK: `tools/setup-dotnet.sh` installs it into `~/.dotnet` (no sudo; safe to re-run).
+  The build also finds `dotnet` on `PATH`, or `DOTNET=...`.
+- About 5 GB of free disk space, and internet access on the first build.
 
 ## What `tools/build-release.sh` does
 
-1. `dotnet publish` of `CoreServer` (the server) and `DaocAdmin` (the TUI/CLI), self-contained for
-   linux-x64, into `dist/daoc-server/bin/`.
-2. Builds `src/Pathing/Detour` with CMake (static libstdc++) into `bin/lib/Detour.so`.
-3. **World:**
+It builds into `dist/daoc-server/`, or into `$DAOC_SERVER_OUT` when that is set (that is how
+OfflineDAoC-macOS builds into its install folder). A rebuild replaces only what the build owns
+(`bin/`, `defaults/` and the top-level scripts); `config/`, `data/`, `logs/` and `run/` stay. It
+refuses to run while the server in that folder is running.
+
+1. `dotnet publish` of `CoreServer` (the server), `DaocAdmin` (the TUI/CLI) and `daoc-progress`
+   (the world upgrade importer), self-contained for osx-arm64, into `bin/`.
+2. Builds `src/Pathing/Detour` with CMake into `bin/lib/Detour.dylib`.
+3. Builds the vendored System.Data.SQLite ([vendor/README.md](../vendor/README.md)) so the server
+   binds the system `libsqlite3`, and overlays it onto the outputs.
+4. **World:**
    - `tools/fetch-upstream-db.sh` unpacks the pinned OpenDAoC-Database bundled in
-     `world/upstream-db/` (9.6 MB; it downloads only if the bundle is missing) into `.cache/` and
+     `world/upstream-db/` (it downloads only if the bundle is missing) into `.cache/` and
      verifies its content hash;
    - `src/WorldBuilder` creates the schema from the server's own DataObjects, loads the dump and
      applies `world/patches/*.sql`;
-   - the result is `defaults/world.sqlite`.
-4. Copies translations, default config, scripts (`daoc-server.sh`, `daoc-admin`,
-   `navmesh-install.sh`, `release.conf`) and the README into the folder.
-5. **Navmeshes:** joins `world/navmesh/*.part-*` into `dist/daoc-navmeshes-classic-si-2.tar.xz`,
-   verifies it against the committed `.sha256`, and installs it into `dist/daoc-server/navmesh`.
-6. Writes `VERSION` (`git describe`, or `dev` without git) and the tarball, which excludes
-   `navmesh/`.
+   - the result is `defaults/world.sqlite`, plus `defaults/world-sluaghbinder.sqlite` (the same
+     world with `world/editions/<game version>/sluaghbinder.sql` applied).
+5. Copies translations, default config, the quest data, the scripts (`daoc-server.sh`,
+   `admin-socket.sh`, `daoc-admin`, `daoc-progress`, `navmesh-install.sh`, `release.conf`) and the
+   README into the folder.
+6. Ad-hoc codesigns every Mach-O in `bin/`, so Gatekeeper and hardened-runtime checks do not block
+   the bundled runtime or the Detour library.
+7. **Navmeshes:** `navmesh-install.sh --from-xz world/navmesh` decompresses the meshes, verifies
+   every file against `world/navmesh-manifest.sha256`, and installs them into `navmesh/`.
+8. Writes `VERSION`: `<game version>-<12-char commit>` (`-dirty` when tracked files have
+   uncommitted changes). The game version is the `OfflineDaocVersion` constant in
+   `AdminService.cs`; set `DAOC_GAME_VERSION` to override it.
 
-It takes about 2.5 minutes. For bot and server code changes, use the 15-second
+It takes about 1.5 to 3 minutes. For bot and server code changes, use the much faster
 `tools/dev-deploy.sh` instead (see [BOTS-DEV.md](BOTS-DEV.md)).
+
+## Packing
+
+```bash
+tools/pack.sh [OUT_DIR]        # default dist/
+```
+
+Packs `dist/daoc-server` (or `$DAOC_SERVER_OUT`) as
+`daoc-server-<game version>-<12-char commit>-osx-arm64.tar.xz` with the root folder `daoc-server/`
+(system `tar` into multithreaded `xz`, about a minute), writes `.daoc-pin.json` into the archive (the
+full commit, for OfflineDAoC-macOS) and the `.sha256` file, and prints the tarball path. It leaves
+out `config/`, `data/`, `logs/` and `run/`, and refuses a tree with uncommitted changes or a folder
+that was built from another commit than `HEAD`: build again first.
+
+## Tests
+
+The deploy scripts (`daoc-server.sh`, `admin-socket.sh`, `daoc-admin`) have stdlib-only tests that
+run them against a fake server:
+
+```bash
+python3 -m unittest discover -s tools/tests
+```
 
 ## Build and test only
 
@@ -69,21 +85,6 @@ dotnet build DaocServer.sln -c Release
 dotnet test Tests/Tests.csproj -c Release --no-build
 ```
 
-Inside the box use `~/.dotnet/dotnet`. Build outputs go to `src/Release/` (server DLLs in
+With the SDK from `tools/setup-dotnet.sh`, use `~/.dotnet/dotnet`. Build outputs go to `src/Release/` (server DLLs in
 `src/Release/lib/`) and `src/build/`. 47 tests that need an installed world are skipped unless
 `OFFLINE_DAOC_NAV_ROOT`, `OFFLINE_DAOC_DB_PATH` and `OFFLINE_DAOC_TEST_DETOUR` are set.
-
-## Verified (2026-10-01, Steam Deck, Ubuntu 22.04 box)
-
-These are automated and log checks. In game, the owner has used the predecessor build
-(`project/`): login and `/spawn` worked.
-
-| Check | Result |
-|---|---|
-| Build | 0 errors (~650 pre-existing warnings) |
-| Tests | 2,754 passed, 0 failed (0.35 sync, 2026-10-09) |
-| World build | ~95 s, 68 MB; identical to Offline DAoC 0.35's pristine world (0 differing tables) |
-| Fresh release start | Ready in ~21 s; 99/99 navmeshes (measured at 0.33; not re-measured for 0.35's 103) |
-| Bot logins | 9 new bots in the world in about 1 s; full AI active within 30 s; 0 errors |
-| Stop | Saves and exits in ~2 s |
-| Dev loop | `tools/dev-deploy.sh` ~16 s; the server boots afterwards with bots intact |
