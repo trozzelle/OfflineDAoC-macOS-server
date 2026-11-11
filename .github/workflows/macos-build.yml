@@ -2,7 +2,7 @@ name: macos-build
 
 on:
   push:
-    branches: [main, 'macos-*']
+    branches: [main, 'macos-[0-9]*']
   pull_request:
   workflow_dispatch:
 
@@ -59,7 +59,7 @@ jobs:
     runs-on: macos-latest
     permissions:
       contents: write
-    # Two pushes of one commit (main and a macos-* branch) must not upload together: the second waits, then skips.
+    # Two pushes of one commit (main and a version branch) must not upload together: the second waits, then skips.
     concurrency:
       group: publish-${{ github.sha }}
       cancel-in-progress: false
