@@ -10,6 +10,7 @@ TestResults/
 # Player data, secrets and runtime state: never commit
 *.db
 *.sqlite
+!vendor/System.Data.SQLite/
 *.sqlite3
 *.db-journal
 *.db-wal
@@ -27,5 +28,6 @@ run/
 # Native build output
 src/Pathing/Detour/build/
 src/build/
+build/
 dist/
 .cache/

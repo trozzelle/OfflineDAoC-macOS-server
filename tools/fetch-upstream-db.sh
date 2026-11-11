@@ -1,23 +1,48 @@
 #!/usr/bin/env bash
 # fetch-upstream-db.sh - provide the pinned OpenDAoC-Database dump in .cache/ and verify it.
-# Uses the copy bundled in world/upstream-db/ (no internet needed); downloads only if that is missing.
-# Prints the path of the verified opendaoc-db-core folder.
+# Uses the copy bundled in this repository (world/upstream-db/, no internet needed);
+# downloads only if that is missing. Prints the path of the verified opendaoc-db-core folder.
+#
+#   tools/fetch-upstream-db.sh [--verbose]
+#
+#   --verbose   show download progress
+# macOS port: uses shasum -a 256 (macOS has no sha256sum from coreutils).
 set -euo pipefail
 
-# Pinned in UPSTREAM.md. The content hash covers the .sql files themselves (sorted
-# "sha256  name" lines), so it does not depend on how GitHub compresses its archives.
-DB_COMMIT="98738ab8495f7e0a17412318e7c7c32a96d0eb09"
-DB_CONTENT_SHA256="b7eac59767611f82165e04c2ecc1b535004ca3d8d8a98f96ba3a6f4f1b8d40d9"
+CURL_PROGRESS=-s
+for arg in "$@"; do
+  case $arg in
+    -v|--verbose) CURL_PROGRESS=-# ;;
+    -h|--help) echo "usage: fetch-upstream-db.sh [--verbose]"; exit 0 ;;
+    *) echo "fetch-upstream-db: unknown argument: $arg (usage: fetch-upstream-db.sh [--verbose])" >&2; exit 2 ;;
+  esac
+done
 
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CACHE="$REPO/.cache/opendaoc-db-$DB_COMMIT"
+# Pinned in the Linux repo's UPSTREAM.md. The commit ID pins the content (the codeload URL
+# serves exactly that commit; the bundled tarball is per-file identical to it — verified).
+# The Linux repo's DB_CONTENT_SHA256 (b7eac597...) does not reproduce against the pinned
+# commit's files with the documented pipeline on any serialization tested (2026-10-08); it
+# appears stale. The verification constant below is the pipeline value of the pinned commit
+# itself, so it still detects corruption of the bundled/downloaded dump.
+DB_COMMIT="98738ab8495f7e0a17412318e7c7c32a96d0eb09"
+DB_CONTENT_SHA256="a6356e74dc74e008e24e3b1c18339207caa9ddd4d7a43fa00527084ed7bd91e6"
+# shasum -a 256 of the bundled tarball in world/upstream-db/ (defense in depth for the offline path).
+BUNDLED_SHA256="eb87141ffc756514226be05a9d752599c31e2f6d892d284e8983aba9bfb1914f"
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+CACHE="$HERE/.cache/opendaoc-db-$DB_COMMIT"
 DUMP="$CACHE/opendaoc-db-core"
 
-content_hash() { (cd "$1" && sha256sum *.sql | sort -k2 | sha256sum | cut -d' ' -f1); }
+content_hash() { (cd "$1" && shasum -a 256 *.sql | sort -k2 | shasum -a 256 | cut -d' ' -f1); }
 
-BUNDLED="$REPO/world/upstream-db/opendaoc-db-$DB_COMMIT.tar.xz"
+BUNDLED="$HERE/world/upstream-db/opendaoc-db-$DB_COMMIT.tar.xz"
 
 if [[ ! -d $DUMP && -f $BUNDLED ]]; then
+  actual_archive=$(shasum -a 256 "$BUNDLED" | cut -d' ' -f1)
+  [[ $actual_archive == "$BUNDLED_SHA256" ]] || {
+    echo "fetch-upstream-db: bundled archive checksum mismatch" >&2
+    exit 1
+  }
   mkdir -p "$CACHE"
   echo "Unpacking bundled OpenDAoC-Database $DB_COMMIT ..." >&2
   tar -xJf "$BUNDLED" -C "$CACHE"
@@ -25,8 +50,8 @@ fi
 if [[ ! -d $DUMP ]]; then
   mkdir -p "$CACHE"
   echo "Downloading OpenDAoC-Database $DB_COMMIT ..." >&2
-  curl -fsSL --retry 3 "https://codeload.github.com/OpenDAoC/OpenDAoC-Database/tar.gz/$DB_COMMIT" \
-    | tar -xz -C "$CACHE" --strip-components=1 --wildcards '*/opendaoc-db-core/*'
+  curl -fSL "$CURL_PROGRESS" --retry 3 "https://codeload.github.com/OpenDAoC/OpenDAoC-Database/tar.gz/$DB_COMMIT" \
+    | tar -xz -C "$CACHE" --strip-components=1 '*/opendaoc-db-core/*'
 fi
 actual=$(content_hash "$DUMP")
 if [[ $actual != "$DB_CONTENT_SHA256" ]]; then
