@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash   # bash -e -o pipefail
+
 jobs:
   build:
     runs-on: macos-latest
@@ -55,6 +59,10 @@ jobs:
     runs-on: macos-latest
     permissions:
       contents: write
+    # Two pushes of one commit (main and a macos-* branch) must not upload together: the second waits, then skips.
+    concurrency:
+      group: publish-${{ github.sha }}
+      cancel-in-progress: false
     env:
       GH_TOKEN: ${{ github.token }}
       TARBALL: ${{ needs.build.outputs.tarball }}
@@ -76,6 +84,13 @@ jobs:
           assets=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')
           if grep -qxF "$TARBALL" <<<"$assets"; then
             echo "$TAG already has $TARBALL; nothing to upload"
+            if ! grep -qxF "$TARBALL.sha256" <<<"$assets"; then
+              # An earlier run uploaded only the tarball: write the checksum of the published asset itself.
+              mkdir published
+              gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "$TARBALL" --dir published
+              (cd published && shasum -a 256 "$TARBALL" > "$TARBALL.sha256")
+              gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" "published/$TARBALL.sha256"
+            fi
             exit 0
           fi
           gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" "release/$TARBALL"
