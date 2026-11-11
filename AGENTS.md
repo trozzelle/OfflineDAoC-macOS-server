@@ -34,7 +34,7 @@ folder when you need to compare or pull. Its release zips hold the world DB and 
 
 - **Host:** an Apple Silicon Mac with the Xcode Command Line Tools and cmake. If the .NET 10 SDK is
   missing, run `tools/setup-dotnet.sh` (safe to re-run).
-- **Healthy startup logs ~390 ERR.** It is upstream's own data; watch for changes, not the number.
+- **Healthy startup logs ~1,160 ERR** (1,162 counted on a fresh 0.35 start). It is upstream's own data; watch for changes, not the number.
 - **Common commands** (from the repo root):
   - Build and test: `cd src && ~/.dotnet/dotnet build DaocServer.sln -c Release && ~/.dotnet/dotnet test Tests/Tests.csproj -c Release --no-build`
   - Deploy-script tests: `python3 -m unittest discover -s tools/tests`

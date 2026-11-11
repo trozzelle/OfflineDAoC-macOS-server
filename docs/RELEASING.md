@@ -35,9 +35,10 @@ Never attach or commit a played database, logs, `serverconfig.xml` or `admins.js
 The repo carries one compressed file per mesh: `world/navmesh/zone042.nav.xz` and so on, plus
 `seams.json.xz`, `pockets.json.xz` and `roads.json.xz`, listed with their SHA-256 in
 `world/navmesh-manifest.sha256`. Git stores identical files once, so an Offline DAoC release that
-changes 3 meshes adds about 20 MB to the repo, not a whole new archive. The current set is the 103
-meshes plus the three bot data files (zone borders, walled pockets, roads) from Offline DAoC 0.35
-(see `UPSTREAM.md`).
+changes 3 meshes adds about 20 MB to the repo, not a whole new archive. The current set is
+`classic-si-3`: the 103 meshes plus the three bot data files (zone borders, walled pockets, roads)
+from Offline DAoC 0.36, used for 0.35. Its `pockets.json` is 0.36's; `roads.json` is new in 0.36 and
+not read by this branch's code (see `UPSTREAM.md`).
 
 `tools/build-release.sh` installs them into the server folder with
 `navmesh-install.sh --from-xz world/navmesh`, verifying every file against the manifest.
@@ -46,10 +47,10 @@ meshes plus the three bot data files (zone borders, walled pockets, roads) from 
 tools/navmesh-stage.sh <folder>       # folder of new meshes -> repo; only changed files are recompressed
 ```
 
-**New meshes from an Offline DAoC release:** read them out of the release zip
-(`tools/world/rangezip.py`, folder `runtime/server/navmesh/`), run `tools/navmesh-stage.sh <folder>`,
+**New meshes from an Offline DAoC release:** take them from the release zip's
+`runtime/server/navmesh/` folder, run `tools/navmesh-stage.sh <folder>`,
 `git add world/navmesh world/navmesh-manifest.sha256`, build, retest the bots (their route data,
-`Bots/autonomous/data/*.json`, was tuned on the current set). If the set is a new one, also change
+`GameServer/bots/autonomous/data/*.json`, was tuned on the current set). If the set is a new one, also change
 its name in the manifest header and in `release.conf`.
 
 ## The world: upstream database pin and the Offline DAoC delta
@@ -74,12 +75,7 @@ a new release, skip step 1):
    `editions/<version>-no-custom-class/runtime/data/opendaoc.sqlite3.db` inside the "b" release zip
    (for 0.36: SHA-256 `4fdb7ca4…`, also listed in the plain release's `download-manifest.json`).
    The zip is split in parts, so read the one file with HTTP range requests rather than downloading
-   it all (see `tools/world/rangezip.py`).
-   From 0.37 a release is an update to the 0.36 base (`"Mode": "patch"` in its
-   `download-manifest.json`) and ships no database: take the 0.36 plain DB above and apply the game
-   patch's (`OfflineDAoC-v<x>-game-patch.zip` on the v<x>b release) `db-<x>.json` to it with
-   `python3 tools/world/apply-release-update.py <db> db-<x>.json`. Its counts must match the JSON's
-   `Summary`, with no rows "left as the game had them".
+   it all.
    Set `WORLD` at the top of the script to the release, then
    `python3 tools/world/derive-world-delta.py <pristine db> /tmp/upstream.sqlite world/patches`
    (it removes nothing itself: delete the old `200-*` files first). Check the script's `EXCLUDED`

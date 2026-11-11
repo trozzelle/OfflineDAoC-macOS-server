@@ -66,7 +66,7 @@ project, not routine. See [UPSTREAM.md](../UPSTREAM.md).
 - **Stopping always saves:** the TUI's Stop button, `daoc-admin server stop`, typing `exit`,
   Ctrl+C and SIGTERM all go through the same path.
 - **Admin plane:**
-  - `Admin.Host/AdminSocketHost` listens on `run/admin.sock` (mode 0600, no network port), or on
+  - `src/GameServer/admin/AdminSocketHost` listens on `run/admin.sock` (mode 0600, no network port), or on
     a short socket in the user's private temp folder when that path would be too long for a unix
     socket (`deploy/admin-socket.sh`).
   - `AdminService` implements every operation: status, accounts and roles, bots, population,
@@ -88,7 +88,7 @@ project, not routine. See [UPSTREAM.md](../UPSTREAM.md).
 | Server settings | `ServerProperty` table | In game: `/serverproperty`. Bot settings are in category `autonomous_population`. |
 | Config | `config/serverconfig.xml`, `logconfig.xml`, `invalidnames.txt`, `admins.json` | Created from `defaults/`; never overwritten by upgrades. |
 | Bot tuning | `bin/bot-goals.json` (optional; defaults built in) | Goal mix per level band; read at startup. |
-| Navmeshes | `navmesh/zone*.nav` (103 files, about 2 GB) plus `seams.json`, `pockets.json` and `roads.json` | Set `classic-si-4`; installed from `world/navmesh/*.xz` against `world/navmesh-manifest.sha256`. |
+| Navmeshes | `navmesh/zone*.nav` (103 files, about 2 GB) plus `seams.json`, `pockets.json` and `roads.json` | Set `classic-si-3` (Offline DAoC 0.36's, used for 0.35; this branch's code does not read `roads.json`); installed from `world/navmesh/*.xz` against `world/navmesh-manifest.sha256`. |
 | Classic quests | `bin/classic-quests.json`, `bin/classic-quest-guides.json` (from `world/`) | Quest step markers, event spawns, quest monsters (`ClassicQuests`); Quest Guide pages (`QuestGuide`). Without them those are off. |
 
 **World pipeline** (`tools/build-release.sh`):
