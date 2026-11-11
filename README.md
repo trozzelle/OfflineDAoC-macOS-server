@@ -72,7 +72,7 @@ make yours an admin, go to the **Accounts** tab, or run `./daoc-admin accounts s
 
 ## Release assets
 
-The `macos-build` workflow builds every push to `main` and to the `macos-*` branches on a macOS
+The `macos-build` workflow builds every push to `main` and to the version branches (`macos-<version>`) on a macOS
 runner and publishes the result to a GitHub release named `macos-<game version>-<12-char commit>`:
 
 ```

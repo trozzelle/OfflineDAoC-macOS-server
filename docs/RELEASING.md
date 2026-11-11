@@ -4,7 +4,7 @@
 
 The `macos-build` workflow (`.github/workflows/macos-build.yml`) does it; nobody uploads by hand.
 
-- **Triggers:** a push to `main` or to a `macos-*` branch, a pull request, or a manual run
+- **Triggers:** a push to `main` or to a version branch (`macos-<version>`), a pull request, or a manual run
   (`workflow_dispatch`).
 - **Build:** on a `macos-latest` runner: the deploy-script tests (`python3 -m unittest discover -s
   tools/tests`), then `tools/build-release.sh`, then `tools/pack.sh`. A pull request stops here.
